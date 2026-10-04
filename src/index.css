@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fredoka", ui-rounded, system-ui, sans-serif;
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+
+  --color-crema: #fffaf5;
+  --color-tinta: #3a2f3d;
+  --color-suave: #7b6e80;
+  --color-linea: #f1e6ea;
+
+  --color-rosa: #fde2ea;
+  --color-rosa-2: #f4a3bb;
+  --color-rosa-fg: #a8355d;
+  --color-lavanda: #ebe4fb;
+  --color-lavanda-fg: #5b3fa8;
+  --color-menta: #dcf3e9;
+  --color-menta-fg: #22724f;
+  --color-durazno: #ffe7d6;
+  --color-durazno-2: #ffc29b;
+  --color-durazno-fg: #a8501a;
+  --color-cielo: #dceefc;
+  --color-cielo-fg: #265d8c;
+  --color-limon: #fbf3c9;
+  --color-limon-fg: #7a6410;
+}
+
+html, body { background: var(--color-crema); color: var(--color-tinta); }
+body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, .font-display { font-family: var(--font-display); }
+
+/* Estampado dálmata: manchas suaves color tinta */
+.dalmata {
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cg fill='%233a2f3d'%3E%3Cellipse cx='20' cy='24' rx='9' ry='6' transform='rotate(-20 20 24)'/%3E%3Cellipse cx='78' cy='14' rx='5' ry='4'/%3E%3Cellipse cx='118' cy='42' rx='10' ry='7' transform='rotate(30 118 42)'/%3E%3Cellipse cx='52' cy='62' rx='6' ry='8' transform='rotate(15 52 62)'/%3E%3Cellipse cx='98' cy='90' rx='4' ry='3.5'/%3E%3Cellipse cx='18' cy='98' rx='5' ry='7' transform='rotate(-35 18 98)'/%3E%3Cellipse cx='66' cy='120' rx='10' ry='5.5' transform='rotate(10 66 120)'/%3E%3Cellipse cx='126' cy='124' rx='5' ry='4'/%3E%3Cellipse cx='86' cy='52' rx='3' ry='2.5'/%3E%3C/g%3E%3C/svg%3E");
+}
+.dalmata-suave { position: relative; }
+.dalmata-suave::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: .07;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cg fill='%233a2f3d'%3E%3Cellipse cx='20' cy='24' rx='9' ry='6' transform='rotate(-20 20 24)'/%3E%3Cellipse cx='78' cy='14' rx='5' ry='4'/%3E%3Cellipse cx='118' cy='42' rx='10' ry='7' transform='rotate(30 118 42)'/%3E%3Cellipse cx='52' cy='62' rx='6' ry='8' transform='rotate(15 52 62)'/%3E%3Cellipse cx='98' cy='90' rx='4' ry='3.5'/%3E%3Cellipse cx='18' cy='98' rx='5' ry='7' transform='rotate(-35 18 98)'/%3E%3Cellipse cx='66' cy='120' rx='10' ry='5.5' transform='rotate(10 66 120)'/%3E%3Cellipse cx='126' cy='124' rx='5' ry='4'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Estampado tigre: rayas durazno sobre crema */
+.tigre {
+  background-color: #ffe7d6;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Cg fill='%23f2a477'%3E%3Cpath d='M6 0 Q20 18 10 36 Q24 20 18 0Z'/%3E%3Cpath d='M40 60 Q28 42 38 22 Q44 44 54 60Z'/%3E%3Cpath d='M66 0 Q78 14 70 28 Q84 14 78 0Z'/%3E%3Cpath d='M98 60 Q88 46 100 30 Q102 48 112 60Z'/%3E%3Cpath d='M104 0 Q112 8 108 16 Q118 8 114 0Z'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+
+@keyframes subir { from { transform: translateY(24px); opacity: 0 } to { transform: none; opacity: 1 } }
+.anim-subir { animation: subir .22s ease-out; }
