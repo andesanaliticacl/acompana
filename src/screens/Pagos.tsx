@@ -44,31 +44,31 @@ export function Pagos() {
       </Titulo>
 
       <div className="mb-4 flex items-center gap-2">
-        <button onClick={() => setLunes(sumarDias(lunes, -7))} className="rounded-full bg-white p-2.5 shadow-sm hover:bg-rosa" aria-label="Semana anterior">
+        <button onClick={() => setLunes(sumarDias(lunes, -7))} className="rounded-lg border border-linea bg-white p-2 shadow-sm hover:bg-fondo" aria-label="Semana anterior">
           <ChevronLeft size={20} />
         </button>
-        <div className="flex-1 text-center font-display text-lg font-semibold">
+        <div className="flex-1 text-center text-lg font-semibold">
           Semana {fmtCorto(lunes)} — {fmtCorto(domingo)}
         </div>
-        <button onClick={() => setLunes(sumarDias(lunes, 7))} className="rounded-full bg-white p-2.5 shadow-sm hover:bg-rosa" aria-label="Semana siguiente">
+        <button onClick={() => setLunes(sumarDias(lunes, 7))} className="rounded-lg border border-linea bg-white p-2 shadow-sm hover:bg-fondo" aria-label="Semana siguiente">
           <ChevronRight size={20} />
         </button>
       </div>
 
-      <div className="tigre mb-5 rounded-3xl p-1.5">
-        <div className="grid gap-4 rounded-[1.25rem] bg-white/95 p-5 sm:grid-cols-3">
+      <div className="mb-5 rounded-xl border border-linea bg-white">
+        <div className="grid gap-4 p-5 sm:grid-cols-3">
           <div>
-            <div className="text-sm font-bold text-suave">Total de la semana</div>
-            <div className="font-display text-3xl font-semibold">{clp(total)}</div>
+            <div className="text-sm font-semibold text-suave">Total de la semana</div>
+            <div className="text-2xl font-semibold">{clp(total)}</div>
             <div className="text-sm text-suave">{fmtHoras(horas)} trabajadas</div>
           </div>
           <div>
-            <div className="text-sm font-bold text-suave">Ya pagado</div>
-            <div className="font-display text-3xl font-semibold text-menta-fg">{clp(pagado)}</div>
+            <div className="text-sm font-semibold text-suave">Ya pagado</div>
+            <div className="text-2xl font-semibold text-ok">{clp(pagado)}</div>
           </div>
           <div>
-            <div className="text-sm font-bold text-suave">Por pagar · {fmtDia(domingo)}</div>
-            <div className="font-display text-3xl font-semibold text-rosa-fg">{clp(total - pagado)}</div>
+            <div className="text-sm font-semibold text-suave">Por pagar · {fmtDia(domingo)}</div>
+            <div className="text-2xl font-semibold text-primario">{clp(total - pagado)}</div>
             <div className="text-sm text-suave">
               {falta > 0 ? `en ${falta} día${falta > 1 ? 's' : ''} (estimado)` : falta === 0 ? '¡hoy es domingo de pago!' : 'semana cerrada'}
             </div>
@@ -84,14 +84,14 @@ export function Pagos() {
               <div className="flex min-w-48 flex-1 items-center gap-3">
                 <Avatar c={c} size={44} />
                 <div>
-                  <div className="font-bold">{c.nombre}</div>
+                  <div className="font-semibold">{c.nombre}</div>
                   <div className="text-sm text-suave">
                     {r.turnos} turnos · {fmtHoras(r.horas)} × {clp(r.tarifa)}
-                    {r.faltas > 0 && <span className="text-rosa-fg"> · {r.faltas} falta{r.faltas > 1 ? 's' : ''}</span>}
-                    {r.atrasos > 0 && <span className="text-limon-fg"> · {r.atrasos} atraso{r.atrasos > 1 ? 's' : ''}</span>}
+                    {r.faltas > 0 && <span className="text-primario"> · {r.faltas} falta{r.faltas > 1 ? 's' : ''}</span>}
+                    {r.atrasos > 0 && <span className="text-aviso"> · {r.atrasos} atraso{r.atrasos > 1 ? 's' : ''}</span>}
                   </div>
                   {r.sinConfirmar > 0 && !r.pagado && (
-                    <div className="mt-0.5 flex items-center gap-1 text-xs font-bold text-limon-fg">
+                    <div className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-aviso">
                       <AlertTriangle size={13} /> {r.sinConfirmar} turno{r.sinConfirmar > 1 ? 's' : ''} sin marcar asistencia
                     </div>
                   )}
@@ -99,7 +99,7 @@ export function Pagos() {
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="text-right text-xs font-bold text-suave">
+                <label className="text-right text-xs font-semibold text-suave">
                   Bono / descuento
                   <input
                     type="number"
@@ -114,20 +114,20 @@ export function Pagos() {
               </div>
 
               <div className="w-32 text-right">
-                <div className="font-display text-2xl font-semibold">{clp(r.pagado ? r.pago!.monto : r.total)}</div>
+                <div className="text-2xl font-semibold">{clp(r.pagado ? r.pago!.monto : r.total)}</div>
                 {r.porVenir > 0 && !r.pagado && <div className="text-xs text-suave">incluye {fmtHoras(r.porVenir)} por venir</div>}
-                {r.pagado && <div className="text-xs font-bold text-menta-fg">Pagado {fmtDia(r.pago!.pagadoEl!)}</div>}
+                {r.pagado && <div className="text-xs font-semibold text-ok">Pagado {fmtDia(r.pago!.pagadoEl!)}</div>}
               </div>
 
               <div className="flex gap-2">
                 {r.pagado ? (
                   <>
                     <a
-                      href={linkWhatsApp(c.telefono, `Hola ${primerNombre(c.nombre)} 🌸 Te transferí ${clp(r.pago!.monto)} por ${fmtHoras(r.horas)} de la semana ${fmtCorto(lunes)} al ${fmtCorto(domingo)}. ¡Gracias por tu trabajo!`)}
+                      href={linkWhatsApp(c.telefono, `Hola ${primerNombre(c.nombre)}, te transferí ${clp(r.pago!.monto)} por ${fmtHoras(r.horas)} de la semana ${fmtCorto(lunes)} al ${fmtCorto(domingo)}. ¡Gracias por tu trabajo!`)}
                       target="_blank"
                       rel="noreferrer"
                     >
-                      <Boton chico variante="suave" className="!bg-menta !text-menta-fg">
+                      <Boton chico variante="suave" className="!bg-ok-50 !text-ok">
                         <MessageCircle size={16} /> Avisar
                       </Boton>
                     </a>

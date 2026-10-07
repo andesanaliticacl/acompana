@@ -1,5 +1,5 @@
 import type { Asignacion, DB, Turno } from './types';
-import { aMin, duracion, hoy, sumarDias } from './fechas';
+import { aMin, duracion, hoy, parse, sumarDias } from './fechas';
 
 export const horasDe = (a: Pick<Asignacion, 'inicio' | 'fin'>) => duracion(a.inicio, a.fin);
 
@@ -69,14 +69,28 @@ export function estadisticas(db: DB, cuidadoraId: string) {
   };
 }
 
-/** Turnos sin nadie (o donde la cuidadora faltó) a partir de una fecha. */
+/** Día de la semana con lunes = 0 … domingo = 6. */
+export const diaSemana = (fecha: string) => (parse(fecha).getDay() + 6) % 7;
+
+/** Horario real de un turno en una fecha (aplica la excepción, ej. domingo desde las 9). */
+export function horario(t: Turno, fecha: string) {
+  const ex = t.excepcion;
+  return ex && ex.dia === diaSemana(fecha) ? { inicio: ex.inicio, fin: ex.fin } : { inicio: t.inicio, fin: t.fin };
+}
+
+/** Cuántas cuidadoras cubren un turno en una fecha (las que faltaron no cuentan). */
+export const cubiertas = (db: DB, fecha: string, turnoId: string) =>
+  db.asignaciones.filter((a) => a.fecha === fecha && a.turnoId === turnoId && a.estado !== 'falto').length;
+
+/** Turnos a los que les falta gente a partir de una fecha. */
 export function huecos(db: DB, desde: string, dias: number) {
-  const out: { fecha: string; turno: Turno }[] = [];
+  const out: { fecha: string; turno: Turno; hay: number; faltan: number }[] = [];
   for (let i = 0; i < dias; i++) {
     const fecha = sumarDias(desde, i);
     for (const t of db.turnos) {
-      const cubierto = db.asignaciones.some((a) => a.fecha === fecha && a.turnoId === t.id && a.estado !== 'falto');
-      if (!cubierto) out.push({ fecha, turno: t });
+      const hay = cubiertas(db, fecha, t.id);
+      const req = Math.max(1, t.requeridas ?? 1);
+      if (hay < req) out.push({ fecha, turno: t, hay, faltan: req - hay });
     }
   }
   return out;

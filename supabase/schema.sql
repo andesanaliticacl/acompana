@@ -1,4 +1,4 @@
--- Pintitas · esquema para Supabase (fase 2, cuando la demo se apruebe)
+-- Acompaña · esquema para Supabase (fase 2, cuando la demo se apruebe)
 -- Refleja 1:1 los tipos de src/lib/types.ts. Una "agencia" = una dueña con su equipo.
 
 create table agencias (

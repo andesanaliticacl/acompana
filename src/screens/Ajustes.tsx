@@ -1,11 +1,11 @@
-import { Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Minus, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useStore } from '../state/store';
-import type { Turno } from '../lib/types';
-import { duracion, fmtHoras, uid } from '../lib/fechas';
+import type { IconoTurno, Turno } from '../lib/types';
+import { DIAS_CORTOS, duracion, fmtHoras, uid } from '../lib/fechas';
 import { COLORES, PALETA } from '../lib/colores';
-import { Boton, Campo, Card, Titulo, cx, inputCls } from '../components/ui';
+import { Boton, Campo, Card, OPCIONES_ICONO, Titulo, TurnoIcono, cx, inputCls } from '../components/ui';
 
-const EMOJIS = ['☀️', '🌇', '🌙', '⭐', '🌤️', '🌛', '🕐', '🏥'];
+const DIAS_LARGOS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 export function Ajustes() {
   const { db, upsert, remove, setAjustes, reiniciar } = useStore();
@@ -18,40 +18,96 @@ export function Ajustes() {
       <Titulo titulo="Ajustes" />
 
       <Card className="mb-4">
-        <Campo label="¿Cómo te llamas? (para saludarte)">
+        <Campo label="Tu nombre (para el saludo de inicio)">
           <input className={inputCls} value={db.ajustes.nombreDuena} onChange={(e) => setAjustes({ nombreDuena: e.target.value })} placeholder="Tu nombre" />
         </Campo>
       </Card>
 
-      <Card className="mb-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xl font-semibold">Turnos</h2>
+      <Card className="mb-4 !p-0">
+        <div className="flex items-center justify-between border-b border-linea px-4 py-3">
+          <div>
+            <h2 className="font-semibold">Turnos</h2>
+            <p className="text-sm text-suave">Horario, cuántas cuidadoras necesita cada turno y horario especial de un día.</p>
+          </div>
           <Boton
             chico
             variante="suave"
-            onClick={() => upsert('turnos', { id: uid(), nombre: 'Nuevo turno', emoji: '⭐', inicio: '10:00', fin: '18:00', color: 'cielo' })}
+            onClick={() => upsert('turnos', { id: uid(), nombre: 'Nuevo turno', icono: 'reloj', inicio: '10:00', fin: '18:00', color: 'verde', requeridas: 1, excepcion: null })}
           >
-            <Plus size={16} /> Agregar turno
+            <Plus size={16} /> Agregar
           </Boton>
         </div>
-        <p className="mb-3 text-sm text-suave">Cambia horarios o agrega turnos (ej. "Media jornada"). Las filas del calendario se arman con esta lista.</p>
-        <div className="space-y-3">
+        <div className="divide-y divide-linea">
           {db.turnos.map((t) => (
-            <div key={t.id} className="rounded-2xl p-3" style={{ background: PALETA[t.color].bg }}>
+            <div key={t.id} className="space-y-3 px-4 py-4">
               <div className="flex flex-wrap items-end gap-2">
-                <select className={cx(inputCls, '!w-16 !px-2')} value={t.emoji} onChange={(e) => editarTurno(t, { emoji: e.target.value })} aria-label="Ícono">
-                  {EMOJIS.map((e) => <option key={e}>{e}</option>)}
-                </select>
-                <input className={cx(inputCls, 'min-w-32 flex-1')} value={t.nombre} onChange={(e) => editarTurno(t, { nombre: e.target.value })} aria-label="Nombre del turno" />
-                <input type="time" className={cx(inputCls, '!w-32')} value={t.inicio} onChange={(e) => e.target.value && editarTurno(t, { inicio: e.target.value })} aria-label="Inicio" />
-                <input type="time" className={cx(inputCls, '!w-32')} value={t.fin} onChange={(e) => e.target.value && editarTurno(t, { fin: e.target.value })} aria-label="Fin" />
+                <span className="grid size-10 place-items-center rounded-lg" style={{ background: PALETA[t.color].bg, color: PALETA[t.color].fg }}>
+                  <TurnoIcono icono={t.icono} size={18} />
+                </span>
+                <Campo label="Nombre">
+                  <input className={cx(inputCls, '!w-40')} value={t.nombre} onChange={(e) => editarTurno(t, { nombre: e.target.value })} />
+                </Campo>
+                <Campo label="Desde">
+                  <input type="time" className={cx(inputCls, '!w-32')} value={t.inicio} onChange={(e) => e.target.value && editarTurno(t, { inicio: e.target.value })} />
+                </Campo>
+                <Campo label="Hasta">
+                  <input type="time" className={cx(inputCls, '!w-32')} value={t.fin} onChange={(e) => e.target.value && editarTurno(t, { fin: e.target.value })} />
+                </Campo>
+                <div className="pb-3 text-sm text-suave">{fmtHoras(duracion(t.inicio, t.fin))}</div>
               </div>
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5">
-                  {COLORES.map((k) => (
-                    <button key={k} onClick={() => editarTurno(t, { color: k })} className={cx('size-6 rounded-full border-2', t.color === k ? 'border-tinta' : 'border-white')} style={{ background: PALETA[k].dot }} aria-label={k} />
-                  ))}
-                  <span className="ml-2 text-sm font-bold" style={{ color: PALETA[t.color].fg }}>{fmtHoras(duracion(t.inicio, t.fin))}</span>
+
+              <div className="flex flex-wrap items-end gap-4">
+                <Campo label="Cuidadoras por turno">
+                  <div className="flex items-center overflow-hidden rounded-lg border border-[#d1d5db] bg-white shadow-sm">
+                    <button className="px-3 py-2.5 hover:bg-fondo" onClick={() => editarTurno(t, { requeridas: Math.max(1, (t.requeridas ?? 1) - 1) })} aria-label="Menos">
+                      <Minus size={15} />
+                    </button>
+                    <span className="w-10 text-center font-semibold tabular-nums">{t.requeridas ?? 1}</span>
+                    <button className="px-3 py-2.5 hover:bg-fondo" onClick={() => editarTurno(t, { requeridas: (t.requeridas ?? 1) + 1 })} aria-label="Más">
+                      <Plus size={15} />
+                    </button>
+                  </div>
+                </Campo>
+
+                <Campo label="Horario especial">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select
+                      className={cx(inputCls, '!w-36')}
+                      value={t.excepcion ? String(t.excepcion.dia) : ''}
+                      onChange={(e) =>
+                        editarTurno(t, {
+                          excepcion: e.target.value === '' ? null : { dia: Number(e.target.value), inicio: t.excepcion?.inicio ?? t.inicio, fin: t.excepcion?.fin ?? t.fin },
+                        })
+                      }
+                    >
+                      <option value="">Ninguno</option>
+                      {DIAS_LARGOS.map((d, i) => <option key={d} value={i}>{d}</option>)}
+                    </select>
+                    {t.excepcion && (
+                      <>
+                        <input type="time" className={cx(inputCls, '!w-32')} value={t.excepcion.inicio} onChange={(e) => e.target.value && editarTurno(t, { excepcion: { ...t.excepcion!, inicio: e.target.value } })} aria-label="Inicio especial" />
+                        <input type="time" className={cx(inputCls, '!w-32')} value={t.excepcion.fin} onChange={(e) => e.target.value && editarTurno(t, { excepcion: { ...t.excepcion!, fin: e.target.value } })} aria-label="Fin especial" />
+                      </>
+                    )}
+                  </div>
+                </Campo>
+              </div>
+              {t.excepcion && (
+                <p className="-mt-1 text-xs text-suave">
+                  Los {DIAS_LARGOS[t.excepcion.dia].toLowerCase()} este turno va de {t.excepcion.inicio} a {t.excepcion.fin} ({fmtHoras(duracion(t.excepcion.inicio, t.excepcion.fin))}).
+                </p>
+              )}
+
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <select className={cx(inputCls, '!w-32 !py-1.5 text-sm')} value={t.icono} onChange={(e) => editarTurno(t, { icono: e.target.value as IconoTurno })} aria-label="Ícono">
+                    {OPCIONES_ICONO.map((o) => <option key={o.id} value={o.id}>Ícono: {o.label}</option>)}
+                  </select>
+                  <div className="flex items-center gap-1.5">
+                    {COLORES.map((k) => (
+                      <button key={k} onClick={() => editarTurno(t, { color: k })} className={cx('size-5 rounded-full border-2', t.color === k ? 'border-tinta' : 'border-white')} style={{ background: PALETA[k].dot }} aria-label={`Color ${k}`} />
+                    ))}
+                  </div>
                 </div>
                 <Boton
                   chico
@@ -63,16 +119,19 @@ export function Ajustes() {
                     if (confirm(`¿Borrar el turno "${t.nombre}"?`)) remove('turnos', t.id);
                   }}
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={16} /> Borrar
                 </Boton>
               </div>
             </div>
           ))}
         </div>
+        <p className="border-t border-linea px-4 py-2.5 text-xs text-suave">
+          Días: {DIAS_CORTOS.join(' · ')}. Los cambios de horario aplican a los turnos que asignes desde ahora.
+        </p>
       </Card>
 
-      <Card className="dalmata-suave">
-        <h2 className="mb-1 text-xl font-semibold">Datos</h2>
+      <Card>
+        <h2 className="mb-1 font-semibold">Datos</h2>
         <p className="mb-3 text-sm text-suave">
           Versión de demostración: la información se guarda solo en este equipo. En la versión final queda en la nube, respaldada y disponible desde el celular y el computador.
         </p>

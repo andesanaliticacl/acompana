@@ -1,9 +1,9 @@
 {
-  "name": "pintitas",
+  "name": "acompana",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Pintitas — turnos, pagos y caja para equipos de cuidadoras.",
+  "description": "Acompaña — gestión de turnos, pagos y caja para equipos de cuidadoras de adultos mayores.",
   "scripts": {
     "dev": "vite --host",
     "build": "tsc --noEmit && vite build",

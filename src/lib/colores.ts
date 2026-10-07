@@ -1,10 +1,11 @@
+// Colores para identificar a cada cuidadora y cada turno: tonos apagados, legibles y sobrios.
 export const PALETA = {
-  rosa: { bg: '#fde2ea', fg: '#a8355d', dot: '#f4a3bb' },
-  lavanda: { bg: '#ebe4fb', fg: '#5b3fa8', dot: '#c3b1f0' },
-  menta: { bg: '#dcf3e9', fg: '#22724f', dot: '#99dcc0' },
-  durazno: { bg: '#ffe7d6', fg: '#a8501a', dot: '#ffc29b' },
-  cielo: { bg: '#dceefc', fg: '#265d8c', dot: '#a5cdf1' },
-  limon: { bg: '#fbf3c9', fg: '#7a6410', dot: '#f0dd7c' },
+  azul: { bg: '#edf3fb', fg: '#1e4e8c', dot: '#7fa6d9' },
+  verde: { bg: '#ecf6f1', fg: '#1d6b4a', dot: '#7cc0a0' },
+  violeta: { bg: '#f1effa', fg: '#4b3f94', dot: '#a99ee0' },
+  ambar: { bg: '#fbf5e9', fg: '#8a5a0b', dot: '#e0b56a' },
+  teja: { bg: '#fbf0ec', fg: '#93412a', dot: '#e2a08a' },
+  gris: { bg: '#f1f3f5', fg: '#3f4b5a', dot: '#a3adba' },
 } as const;
 
 export type ColorKey = keyof typeof PALETA;

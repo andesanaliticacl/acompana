@@ -7,7 +7,7 @@ import { clp, edad, fmtDia, fmtHora, fmtHoras } from '../lib/fechas';
 import { estadisticas, linkWhatsApp } from '../lib/calculos';
 import { COLORES, PALETA } from '../lib/colores';
 import { uid } from '../lib/fechas';
-import { Avatar, Boton, Campo, Card, Estrellas, Modal, Rasgo, Titulo, cx, inputCls, primerNombre } from '../components/ui';
+import { Avatar, Boton, Campo, Card, Estrellas, Modal, Rasgo, Titulo, TurnoIcono, cx, inputCls, primerNombre } from '../components/ui';
 
 export function Cuidadoras() {
   const { db } = useStore();
@@ -37,7 +37,7 @@ export function Cuidadoras() {
           <input className={cx(inputCls, 'pl-11')} placeholder="Buscar por nombre o rasgo (ej: puntual)" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         {inactivas > 0 && (
-          <label className="flex items-center gap-2 text-sm font-bold text-suave">
+          <label className="flex items-center gap-2 text-sm font-semibold text-suave">
             <input type="checkbox" checked={verInactivas} onChange={(e) => setVerInactivas(e.target.checked)} /> Ver inactivas ({inactivas})
           </label>
         )}
@@ -47,11 +47,11 @@ export function Cuidadoras() {
         {lista.map((c) => {
           const s = estadisticas(db, c.id);
           return (
-            <Card key={c.id} onClick={() => setVerId(c.id)} className={cx('dalmata-suave', !c.activa && 'opacity-60')}>
+            <Card key={c.id} onClick={() => setVerId(c.id)} className={cx('', !c.activa && 'opacity-60')}>
               <div className="flex items-start gap-3">
                 <Avatar c={c} size={56} />
                 <div className="min-w-0 flex-1">
-                  <h3 className="truncate text-lg font-semibold">{c.nombre}</h3>
+                  <h3 className="truncate font-semibold">{c.nombre}</h3>
                   <p className="text-sm text-suave">
                     {edad(c.fechaNacimiento)} años · {c.experiencia} años de experiencia
                   </p>
@@ -82,9 +82,9 @@ const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}%
 
 function Mini({ label, valor }: { label: string; valor: string }) {
   return (
-    <div className="rounded-2xl bg-[#fbf3f6] px-1 py-2">
-      <div className="font-display text-base font-semibold">{valor}</div>
-      <div className="text-[11px] font-bold text-suave">{label}</div>
+    <div className="rounded-lg border border-linea bg-fondo px-1 py-2">
+      <div className="text-base font-semibold">{valor}</div>
+      <div className="text-[11px] text-suave">{label}</div>
     </div>
   );
 }
@@ -97,30 +97,27 @@ const nueva = (): Cuidadora => ({
 function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; onEditar: () => void }) {
   const { db } = useStore();
   const s = estadisticas(db, c.id);
-  const col = PALETA[c.color];
   const turno = (id: string) => db.turnos.find((t) => t.id === id);
 
   return (
     <Modal titulo="Perfil" onClose={onClose} ancho="max-w-2xl">
-      <div className="dalmata relative -mx-5 mb-12 h-24" style={{ backgroundColor: col.bg }}>
-        <div className="absolute -bottom-10 left-5">
-          <Avatar c={c} size={84} />
-        </div>
-      </div>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-semibold">{c.nombre}</h2>
-          <p className="text-suave">
-            {edad(c.fechaNacimiento)} años · {c.experiencia} años cuidando · {clp(c.tarifaHora)}/hora
-          </p>
-          <div className="mt-1 flex items-center gap-2">
-            <Estrellas valor={c.valoracion} />
-            <span className="text-sm font-bold text-suave">tu valoración</span>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Avatar c={c} size={64} />
+          <div>
+            <h2 className="text-xl font-semibold">{c.nombre}</h2>
+            <p className="text-sm text-suave">
+              {edad(c.fechaNacimiento)} años · {c.experiencia} años de experiencia · {clp(c.tarifaHora)}/hora
+            </p>
+            <div className="mt-1 flex items-center gap-2">
+              <Estrellas valor={c.valoracion} size={16} />
+              <span className="text-xs text-suave">Tu valoración</span>
+            </div>
           </div>
         </div>
         <div className="flex gap-2">
-          <a href={linkWhatsApp(c.telefono, `Hola ${primerNombre(c.nombre)} 🌸`)} target="_blank" rel="noreferrer">
-            <Boton variante="suave" chico className="!bg-menta !text-menta-fg">
+          <a href={linkWhatsApp(c.telefono, `Hola ${primerNombre(c.nombre)}`)} target="_blank" rel="noreferrer">
+            <Boton variante="suave" chico>
               <MessageCircle size={16} /> WhatsApp
             </Boton>
           </a>
@@ -151,7 +148,7 @@ function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; o
       </p>
 
       {c.notas && (
-        <div className="mt-4 rounded-2xl bg-limon p-3 text-sm text-limon-fg">
+        <div className="mt-4 rounded-lg bg-aviso-50 p-3 text-sm text-aviso">
           <b>Tus notas privadas:</b> {c.notas}
         </div>
       )}
@@ -162,8 +159,8 @@ function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; o
           {s.proximos.length === 0 && <p className="text-sm text-suave">Sin turnos asignados.</p>}
           <ul className="space-y-1.5">
             {s.proximos.map((a) => (
-              <li key={a.id} className="flex justify-between rounded-xl bg-white px-3 py-2 text-sm">
-                <span className="font-bold">{turno(a.turnoId)?.emoji} {fmtDia(a.fecha)}</span>
+              <li key={a.id} className="flex justify-between rounded-lg border border-linea bg-white px-3 py-2 text-sm">
+                <span className="flex items-center gap-2 font-medium">{turno(a.turnoId) && <TurnoIcono icono={turno(a.turnoId)!.icono} size={14} className="text-suave" />} {fmtDia(a.fecha)}</span>
                 <span className="text-suave">{fmtHora(a.inicio)}–{fmtHora(a.fin)} h</span>
               </li>
             ))}
@@ -173,9 +170,9 @@ function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; o
           <h3 className="mb-2 font-semibold">Últimos turnos</h3>
           <ul className="space-y-1.5">
             {s.ultimos.map((a) => (
-              <li key={a.id} className="flex items-center justify-between rounded-xl bg-white px-3 py-2 text-sm">
-                <span className="font-bold">{turno(a.turnoId)?.emoji} {fmtDia(a.fecha)}</span>
-                <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: ESTADOS[a.estado].bg, color: ESTADOS[a.estado].fg }}>
+              <li key={a.id} className="flex items-center justify-between rounded-lg border border-linea bg-white px-3 py-2 text-sm">
+                <span className="flex items-center gap-2 font-medium">{turno(a.turnoId) && <TurnoIcono icono={turno(a.turnoId)!.icono} size={14} className="text-suave" />} {fmtDia(a.fecha)}</span>
+                <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: ESTADOS[a.estado].bg, color: ESTADOS[a.estado].fg }}>
                   {ESTADOS[a.estado].label}
                 </span>
               </li>
@@ -205,7 +202,7 @@ function FormCuidadora({ inicial, onClose, onGuardada }: { inicial: Cuidadora; o
                 key={k}
                 type="button"
                 onClick={() => set({ color: k })}
-                className={cx('size-8 rounded-full border-[3px] transition', f.color === k ? 'border-tinta' : 'border-white')}
+                className={cx('size-7 rounded-full border-2 transition', f.color === k ? 'border-tinta ring-2 ring-tinta/20' : 'border-white')}
                 style={{ background: PALETA[k].dot }}
                 aria-label={k}
               />
@@ -245,7 +242,7 @@ function FormCuidadora({ inicial, onClose, onGuardada }: { inicial: Cuidadora; o
         <Campo label="Notas privadas (solo tú las ves)">
           <textarea className={cx(inputCls, 'min-h-16')} value={f.notas} onChange={(e) => set({ notas: e.target.value })} />
         </Campo>
-        <label className="flex items-center gap-2 font-bold">
+        <label className="flex items-center gap-2 font-semibold">
           <input type="checkbox" className="size-5" checked={f.activa} onChange={(e) => set({ activa: e.target.checked })} /> Activa en el equipo
         </label>
         <Boton

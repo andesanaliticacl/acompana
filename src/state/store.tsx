@@ -1,5 +1,5 @@
 /**
- * Capa de datos de Pintitas.
+ * Capa de datos de Acompaña.
  *
  * Hoy (modo demo) todo vive en localStorage del dispositivo. Para pasar a Supabase
  * basta con reemplazar `cargar`, `upsert` y `remove` por llamadas a las tablas de
@@ -9,7 +9,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { DB } from '../lib/types';
 import { crearSeed, dbVacia } from '../lib/seed';
 
-const KEY = 'pintitas-demo-v2';
+const KEY = 'acompana-demo-v2';
 
 type Coleccion = 'cuidadoras' | 'turnos' | 'asignaciones' | 'pagos' | 'movimientos';
 type Item<K extends Coleccion> = DB[K][number];

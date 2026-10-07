@@ -1,6 +1,6 @@
-# Pintitas 🐾
+# Acompaña
 
-Turnos, pagos y caja para una dueña de un equipo de cuidadoras. Reemplaza el cuaderno y el Excel.
+Gestión de turnos, pagos y caja para una empresa de cuidadoras de adultos mayores. Reemplaza el cuaderno y el Excel.
 
 > **Estado: demo.** Los datos viven en el navegador (localStorage) y se cargan datos de ejemplo
 > relativos a la fecha de hoy. Fase 2: conectar Supabase (`supabase/schema.sql`).

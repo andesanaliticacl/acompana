@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { AlertCircle, CalendarPlus, Cake, ChevronRight, HandCoins, Plus } from 'lucide-react';
+import { AlertTriangle, Cake, CalendarPlus, CheckCircle2, ChevronRight, Plus, Wallet } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Asignacion, Estado } from '../lib/types';
 import { ESTADOS } from '../lib/types';
 import { clp, diasACumple, diasEntre, edad, fmtDia, fmtHora, fmtHoras, fmtLargo, hoy, lunesDe, sumarDias } from '../lib/fechas';
-import { horasDe, huecos, resumenSemana } from '../lib/calculos';
+import { horario, horasDe, huecos, resumenSemana } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
-import { Avatar, Boton, Card, cx, primerNombre } from '../components/ui';
+import { Avatar, Boton, Card, TurnoIcono, cx, primerNombre } from '../components/ui';
 import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
 import type { Tab } from '../App';
 
@@ -23,6 +23,7 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
     return s + (r.pagado ? 0 : r.total);
   }, 0);
   const pendientes = huecos(db, h, 7);
+  const faltanTotal = pendientes.reduce((s, p) => s + p.faltan, 0);
   const cumples = db.cuidadoras
     .filter((c) => c.activa && diasACumple(c.fechaNacimiento) <= 14)
     .sort((a, b) => diasACumple(a.fechaNacimiento) - diasACumple(b.fechaNacimiento));
@@ -33,37 +34,85 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
 
   return (
     <div>
-      <div className="mb-5">
-        <p className="font-bold text-suave">{fmtLargo(h)}</p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          {saludo}{nombre ? `, ${nombre}` : ''} 🐾
-        </h1>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-sm text-suave">{fmtLargo(h)}</p>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {saludo}{nombre ? `, ${nombre}` : ''}
+          </h1>
+        </div>
+        <div className="flex gap-2">
+          <Boton chico variante="suave" onClick={() => ir('caja')}>
+            <Plus size={16} /> Registrar ingreso
+          </Boton>
+          <Boton chico onClick={() => setModal({ fecha: h })}>
+            <CalendarPlus size={16} /> Asignar turno
+          </Boton>
+        </div>
+      </div>
+
+      {/* Indicadores */}
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <button onClick={() => ir('pagos')} className="rounded-xl border border-linea bg-white p-4 text-left shadow-[0_1px_2px_rgba(16,24,40,.04)] transition hover:border-primario-200">
+          <div className="flex items-center gap-2 text-sm text-suave">
+            <Wallet size={16} /> A pagar el domingo {fmtDia(domingo).split(' ').slice(1).join(' ')}
+          </div>
+          <div className="mt-1 text-2xl font-semibold tabular-nums">{clp(aPagar)}</div>
+          <div className="text-xs text-suave">{faltanDias === 0 ? 'Hoy es día de pago' : `Faltan ${faltanDias} día${faltanDias > 1 ? 's' : ''}`}</div>
+        </button>
+        <div className={cx('rounded-xl border p-4', pendientes.length ? 'border-alerta-200 bg-alerta-50' : 'border-linea bg-white')}>
+          <div className={cx('flex items-center gap-2 text-sm', pendientes.length ? 'text-alerta' : 'text-suave')}>
+            {pendientes.length ? <AlertTriangle size={16} /> : <CheckCircle2 size={16} />} Próximos 7 días
+          </div>
+          <div className={cx('mt-1 text-2xl font-semibold', pendientes.length > 0 && 'text-alerta')}>
+            {pendientes.length ? `${faltanTotal} cupo${faltanTotal > 1 ? "s" : ""} sin cubrir` : "Todo cubierto"}
+          </div>
+          <div className="text-xs text-suave">{pendientes.length ? 'Revisa la lista de abajo' : 'Todos los turnos tienen cuidadora'}</div>
+        </div>
+        <div className="rounded-xl border border-linea bg-white p-4">
+          <div className="flex items-center gap-2 text-sm text-suave">
+            <Cake size={16} /> Cumpleaños próximos
+          </div>
+          {cumples.length === 0 ? (
+            <div className="mt-1 text-sm text-suave">Ninguno en las próximas 2 semanas</div>
+          ) : (
+            <ul className="mt-1.5 space-y-1">
+              {cumples.slice(0, 2).map((c) => {
+                const d = diasACumple(c.fechaNacimiento);
+                return (
+                  <li key={c.id} className="flex items-center justify-between gap-2 text-sm">
+                    <span className="font-medium">{primerNombre(c.nombre)} <span className="text-suave">({edad(c.fechaNacimiento) + 1})</span></span>
+                    <span className="text-suave">{d === 0 ? 'hoy' : d === 1 ? 'mañana' : `en ${d} días`}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          <Card>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-xl font-semibold">¿Quién cuida hoy?</h2>
-              <Boton chico variante="suave" onClick={() => setModal({ fecha: h })}>
-                <Plus size={16} /> Asignar
-              </Boton>
+          <Card className="!p-0">
+            <div className="flex items-center justify-between border-b border-linea px-4 py-3">
+              <h2 className="font-semibold">Turnos de hoy</h2>
+              <span className="text-xs text-suave">Marca la asistencia al llegar cada cuidadora</span>
             </div>
-            <div className="space-y-3">
+            <div className="divide-y divide-linea">
               {db.turnos.map((t) => (
                 <FilaTurno key={t.id} fecha={h} turnoId={t.id} onEditar={setModal} onEstado={(a, estado) => upsert('asignaciones', { ...a, estado })} conAsistencia />
               ))}
             </div>
           </Card>
 
-          <Card>
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Mañana · {fmtDia(manana)}</h2>
-              <button onClick={() => ir('semana')} className="flex items-center text-sm font-bold text-rosa-fg">
+          <Card className="!p-0">
+            <div className="flex items-center justify-between border-b border-linea px-4 py-3">
+              <h2 className="font-semibold">Mañana, {fmtDia(manana)}</h2>
+              <button onClick={() => ir('semana')} className="flex items-center text-sm font-medium text-primario hover:underline">
                 Ver semana <ChevronRight size={16} />
               </button>
             </div>
-            <div className="space-y-2">
+            <div className="divide-y divide-linea">
               {db.turnos.map((t) => (
                 <FilaTurno key={t.id} fecha={manana} turnoId={t.id} onEditar={setModal} />
               ))}
@@ -71,77 +120,31 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
           </Card>
         </div>
 
-        <div className="space-y-4">
-          <div className="tigre overflow-hidden rounded-3xl p-1.5">
-            <div className="rounded-[1.25rem] bg-white/95 p-4">
-              <div className="flex items-center gap-2 text-sm font-bold text-durazno-fg">
-                <HandCoins size={18} /> Pago del domingo {fmtDia(domingo).split(' ').slice(1).join(' ')}
-              </div>
-              <div className="mt-1 font-display text-3xl font-semibold">{clp(aPagar)}</div>
-              <p className="text-sm text-suave">
-                {faltanDias === 0 ? '¡Hoy es día de pago! 🎉' : `Faltan ${faltanDias} día${faltanDias > 1 ? 's' : ''}`}
-              </p>
-              <Boton chico className="mt-3 w-full" onClick={() => ir('pagos')}>
-                Ver detalle de pagos
-              </Boton>
-            </div>
+        <Card className="h-fit !p-0">
+          <div className="border-b border-linea px-4 py-3">
+            <h2 className="font-semibold">Turnos sin cubrir</h2>
           </div>
-
-          <Card className={cx(pendientes.length > 0 && 'border-rosa-2')}>
-            <div className="flex items-center gap-2">
-              <AlertCircle size={20} className={pendientes.length ? 'text-rosa-fg' : 'text-menta-fg'} />
-              <h2 className="text-lg font-semibold">
-                {pendientes.length ? `${pendientes.length} turno${pendientes.length > 1 ? 's' : ''} sin cubrir` : 'Todo cubierto 7 días ✨'}
-              </h2>
-            </div>
-            {pendientes.length > 0 && (
-              <ul className="mt-2 space-y-1.5">
-                {pendientes.slice(0, 5).map((p) => (
-                  <li key={p.fecha + p.turno.id}>
-                    <button
-                      onClick={() => setModal({ fecha: p.fecha, turnoId: p.turno.id })}
-                      className="flex w-full items-center justify-between rounded-2xl border-2 border-dashed border-rosa-2 px-3 py-2 text-left text-sm font-bold hover:bg-rosa"
-                    >
-                      <span>{p.turno.emoji} {fmtDia(p.fecha)} · {p.turno.nombre}</span>
-                      <span className="text-rosa-fg">Cubrir</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-
-          {cumples.length > 0 && (
-            <Card className="dalmata-suave">
-              <div className="flex items-center gap-2 font-semibold">
-                <Cake size={20} className="text-rosa-fg" /> Cumpleaños cerca
-              </div>
-              <ul className="mt-2 space-y-2">
-                {cumples.map((c) => {
-                  const d = diasACumple(c.fechaNacimiento);
-                  return (
-                    <li key={c.id} className="flex items-center gap-2 text-sm">
-                      <Avatar c={c} size={28} />
-                      <span className="font-bold">{primerNombre(c.nombre)}</span>
-                      <span className="text-suave">
-                        cumple {edad(c.fechaNacimiento) + 1} {d === 0 ? 'hoy 🎂' : d === 1 ? 'mañana' : `en ${d} días`}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Card>
+          {pendientes.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-suave">No hay turnos pendientes en los próximos 7 días.</p>
+          ) : (
+            <ul className="divide-y divide-linea">
+              {pendientes.slice(0, 8).map((p) => (
+                <li key={p.fecha + p.turno.id} className="flex items-center justify-between gap-2 px-4 py-2.5">
+                  <div className="flex items-center gap-2.5 text-sm">
+                    <TurnoIcono icono={p.turno.icono} className="text-suave" />
+                    <div>
+                      <div className="font-medium">{fmtDia(p.fecha)}</div>
+                      <div className="text-xs text-suave">{p.turno.nombre} · {fmtHora(horario(p.turno, p.fecha).inicio)}–{fmtHora(horario(p.turno, p.fecha).fin)} h · <span className="font-medium text-alerta">falta{p.faltan > 1 ? `n ${p.faltan}` : " 1"} ({p.hay}/{p.turno.requeridas})</span></div>
+                    </div>
+                  </div>
+                  <Boton chico variante="suave" onClick={() => setModal({ fecha: p.fecha, turnoId: p.turno.id })}>
+                    Asignar
+                  </Boton>
+                </li>
+              ))}
+            </ul>
           )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <Boton variante="suave" className="!rounded-3xl !py-4" onClick={() => setModal({ fecha: h })}>
-              <CalendarPlus size={18} /> Turno
-            </Boton>
-            <Boton variante="suave" className="!rounded-3xl !bg-menta !py-4 !text-menta-fg" onClick={() => ir('caja')}>
-              <Plus size={18} /> Ingreso
-            </Boton>
-          </div>
-        </div>
+        </Card>
       </div>
 
       {modal && <AsignarModal inicial={modal} onClose={() => setModal(null)} />}
@@ -162,32 +165,38 @@ function FilaTurno({
   const t = db.turnos.find((x) => x.id === turnoId)!;
   const lista = db.asignaciones.filter((a) => a.fecha === fecha && a.turnoId === turnoId);
   const col = PALETA[t.color];
+  const hay = lista.filter((a) => a.estado !== "falto").length;
 
   return (
-    <div className="rounded-2xl p-3" style={{ background: col.bg }}>
-      <div className="mb-1 flex items-center justify-between text-sm font-bold" style={{ color: col.fg }}>
-        <span>{t.emoji} {t.nombre}</span>
-        <span>{fmtHora(t.inicio)}–{fmtHora(t.fin)} h</span>
+    <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start">
+      <div className="flex w-36 shrink-0 items-start gap-2 pt-1">
+        <span className="grid size-7 place-items-center rounded-md" style={{ background: col.bg, color: col.fg }}>
+          <TurnoIcono icono={t.icono} size={15} />
+        </span>
+        <div className="leading-tight">
+          <div className="text-sm font-medium">{t.nombre}</div>
+          <div className="text-xs text-suave">{fmtHora(horario(t, fecha).inicio)}–{fmtHora(horario(t, fecha).fin)} h</div>
+          <div className={cx("mt-0.5 text-xs font-medium tabular-nums", hay >= t.requeridas ? "text-ok" : "text-alerta")}>{hay} de {t.requeridas}</div>
+        </div>
       </div>
-      {lista.length === 0 && (
-        <button
-          onClick={() => onEditar({ fecha, turnoId })}
-          className="w-full rounded-xl border-2 border-dashed bg-white/60 py-2 text-sm font-bold"
-          style={{ borderColor: col.dot, color: col.fg }}
-        >
-          Sin cubrir · toca para asignar
-        </button>
-      )}
-      <div className="space-y-2">
+      <div className="min-w-0 flex-1 space-y-2">
+        {lista.length === 0 && (
+          <button
+            onClick={() => onEditar({ fecha, turnoId })}
+            className="flex w-full items-center gap-2 rounded-lg border border-dashed border-alerta-200 bg-alerta-50 px-3 py-2 text-sm font-medium text-alerta hover:bg-[#fbe9e7]"
+          >
+            <AlertTriangle size={15} /> Sin cubrir · asignar cuidadoras
+          </button>
+        )}
         {lista.map((a) => {
           const c = db.cuidadoras.find((x) => x.id === a.cuidadoraId);
           if (!c) return null;
           return (
-            <div key={a.id} className="flex flex-wrap items-center gap-3 rounded-xl bg-white/80 p-2">
+            <div key={a.id} className="flex flex-wrap items-center gap-3">
               <button className="flex min-w-[11rem] flex-1 items-center gap-2.5 text-left" onClick={() => onEditar({ fecha, id: a.id })}>
-                <Avatar c={c} size={36} />
+                <Avatar c={c} size={34} />
                 <div className="min-w-0">
-                  <div className={cx('truncate font-bold', a.estado === 'falto' && 'line-through opacity-60')}>{c.nombre}</div>
+                  <div className={cx('truncate text-sm font-medium hover:underline', a.estado === 'falto' && 'text-suave line-through')}>{c.nombre}</div>
                   <div className="text-xs text-suave">
                     {fmtHora(a.inicio)}–{fmtHora(a.fin)} h · {fmtHoras(horasDe(a))}
                     {a.nota ? ` · ${a.nota}` : ''}
@@ -195,13 +204,13 @@ function FilaTurno({
                 </div>
               </button>
               {conAsistencia && onEstado ? (
-                <div className="flex flex-1 justify-end gap-1 sm:flex-none">
-                  {(['asistio', 'atraso', 'falto'] as Estado[]).map((e) => (
+                <div className="flex flex-1 overflow-hidden rounded-lg border border-[#d1d5db] sm:flex-none">
+                  {(['asistio', 'atraso', 'falto'] as Estado[]).map((e, i) => (
                     <button
                       key={e}
                       onClick={() => onEstado(a, a.estado === e ? 'programado' : e)}
-                      className={cx('flex-1 rounded-full px-2.5 py-1.5 text-xs font-bold transition sm:flex-none', a.estado !== e && 'bg-[#f6f1f3] text-suave hover:brightness-95')}
-                      style={a.estado === e ? { background: ESTADOS[e].bg, color: ESTADOS[e].fg, boxShadow: `inset 0 0 0 2px ${ESTADOS[e].fg}` } : undefined}
+                      className={cx('flex-1 px-3 py-1.5 text-xs font-medium transition sm:flex-none', i > 0 && 'border-l border-[#d1d5db]', a.estado !== e && 'bg-white text-suave hover:bg-fondo')}
+                      style={a.estado === e ? { background: ESTADOS[e].bg, color: ESTADOS[e].fg } : undefined}
                     >
                       {ESTADOS[e].corto}
                     </button>
@@ -209,7 +218,7 @@ function FilaTurno({
                 </div>
               ) : (
                 a.estado !== 'programado' && (
-                  <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: ESTADOS[a.estado].bg, color: ESTADOS[a.estado].fg }}>
+                  <span className="rounded-md px-2 py-0.5 text-xs font-medium" style={{ background: ESTADOS[a.estado].bg, color: ESTADOS[a.estado].fg }}>
                     {ESTADOS[a.estado].label}
                   </span>
                 )

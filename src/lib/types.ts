@@ -1,5 +1,7 @@
 import type { ColorKey } from './colores';
 
+export type IconoTurno = 'manana' | 'tarde' | 'noche' | 'reloj';
+
 export type Estado = 'programado' | 'asistio' | 'atraso' | 'falto';
 
 export interface Cuidadora {
@@ -20,10 +22,13 @@ export interface Cuidadora {
 export interface Turno {
   id: string;
   nombre: string;
-  emoji: string;
+  icono: IconoTurno;
   inicio: string; // HH:MM
   fin: string; // HH:MM (si es menor que inicio, cruza la medianoche)
   color: ColorKey;
+  requeridas: number; // cuántas cuidadoras necesita el turno
+  /** Horario distinto un día de la semana (0 = lunes … 6 = domingo), ej. domingo parte a las 9. */
+  excepcion?: { dia: number; inicio: string; fin: string } | null;
 }
 
 export interface Asignacion {
@@ -86,8 +91,8 @@ export const RASGOS: { nombre: string; tono: 'bueno' | 'neutro' | 'ojo' }[] = [
 export const tonoRasgo = (r: string) => RASGOS.find((x) => x.nombre === r)?.tono ?? 'neutro';
 
 export const ESTADOS: Record<Estado, { label: string; corto: string; bg: string; fg: string }> = {
-  programado: { label: 'Programado', corto: 'Por venir', bg: '#f3eef4', fg: '#7b6e80' },
-  asistio: { label: 'Asistió', corto: 'Llegó', bg: '#dcf3e9', fg: '#22724f' },
-  atraso: { label: 'Llegó tarde', corto: 'Tarde', bg: '#fbf3c9', fg: '#7a6410' },
-  falto: { label: 'Faltó', corto: 'No vino', bg: '#fde2ea', fg: '#a8355d' },
+  programado: { label: 'Programado', corto: 'Pendiente', bg: '#f1f3f5', fg: '#4b5563' },
+  asistio: { label: 'Asistió', corto: 'Llegó', bg: '#effaf3', fg: '#15803d' },
+  atraso: { label: 'Llegó tarde', corto: 'Tarde', bg: '#fdf8eb', fg: '#a16207' },
+  falto: { label: 'Faltó', corto: 'No vino', bg: '#fdf3f2', fg: '#b42318' },
 };

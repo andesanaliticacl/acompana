@@ -1,7 +1,7 @@
 import { useEffect, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import { Star, X } from 'lucide-react';
+import { Clock, HeartHandshake, Moon, Star, Sun, Sunset, X } from 'lucide-react';
 import { PALETA, type ColorKey } from '../lib/colores';
-import { ESTADOS, tonoRasgo, type Cuidadora, type Estado } from '../lib/types';
+import { ESTADOS, tonoRasgo, type Cuidadora, type Estado, type IconoTurno } from '../lib/types';
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
@@ -9,7 +9,11 @@ export function Card({ className, children, onClick }: { className?: string; chi
   return (
     <div
       onClick={onClick}
-      className={cx('rounded-3xl border border-linea bg-white p-4 shadow-[0_2px_0_#f1e6ea]', onClick && 'cursor-pointer transition hover:-translate-y-0.5 hover:shadow-md', className)}
+      className={cx(
+        'rounded-xl border border-linea bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,.04)]',
+        onClick && 'cursor-pointer transition hover:border-primario-200 hover:shadow-md',
+        className,
+      )}
     >
       {children}
     </div>
@@ -22,12 +26,12 @@ export function Boton({ variante = 'principal', chico, className, ...p }: BtnPro
     <button
       {...p}
       className={cx(
-        'inline-flex items-center justify-center gap-2 rounded-full font-bold transition active:scale-[.97] disabled:opacity-40',
-        chico ? 'px-3 py-1.5 text-sm' : 'px-5 py-3',
-        variante === 'principal' && 'bg-tinta text-white hover:bg-[#4d3f51]',
-        variante === 'suave' && 'bg-rosa text-rosa-fg hover:bg-[#fbd2de]',
-        variante === 'fantasma' && 'text-suave hover:bg-[#f6eff2]',
-        variante === 'peligro' && 'text-rosa-fg hover:bg-rosa',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition disabled:opacity-40',
+        chico ? 'px-3 py-1.5 text-sm' : 'px-4 py-2.5',
+        variante === 'principal' && 'bg-primario text-white shadow-sm hover:bg-primario-600',
+        variante === 'suave' && 'border border-linea bg-white text-tinta shadow-sm hover:bg-fondo',
+        variante === 'fantasma' && 'text-suave hover:bg-fondo hover:text-tinta',
+        variante === 'peligro' && 'text-alerta hover:bg-alerta-50',
         className,
       )}
     />
@@ -45,19 +49,18 @@ export function Modal({ titulo, onClose, children, ancho = 'max-w-lg' }: { titul
     };
   }, [onClose]);
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#3a2f3d]/40 sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#111827]/40 sm:items-center sm:p-4" onClick={onClose}>
       <div
         onClick={(e) => e.stopPropagation()}
-        className={cx('anim-subir flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-[2rem] bg-crema shadow-2xl sm:rounded-[2rem]', ancho)}
+        className={cx('anim-subir flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl', ancho)}
       >
-        <div className="tigre h-2.5 shrink-0" />
-        <div className="flex shrink-0 items-center justify-between gap-3 px-5 pt-4 pb-2">
-          <h2 className="text-xl font-semibold">{titulo}</h2>
-          <button onClick={onClose} className="rounded-full p-2 text-suave hover:bg-rosa" aria-label="Cerrar">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-linea px-5 py-3.5">
+          <h2 className="text-lg font-semibold">{titulo}</h2>
+          <button onClick={onClose} className="rounded-lg p-1.5 text-suave hover:bg-fondo" aria-label="Cerrar">
             <X size={20} />
           </button>
         </div>
-        <div className="overflow-y-auto px-5 pb-6">{children}</div>
+        <div className="overflow-y-auto px-5 pt-4 pb-6">{children}</div>
       </div>
     </div>
   );
@@ -75,12 +78,24 @@ export function Avatar({ c, size = 44 }: { c: Pick<Cuidadora, 'nombre' | 'color'
   const col = PALETA[c.color];
   return (
     <div
-      className="relative grid shrink-0 place-items-center rounded-full font-display font-semibold"
-      style={{ width: size, height: size, background: col.bg, color: col.fg, fontSize: size * 0.36, boxShadow: `0 0 0 2px #fff, 0 0 0 4px ${col.dot}` }}
+      className="grid shrink-0 place-items-center rounded-full font-semibold"
+      style={{ width: size, height: size, background: col.bg, color: col.fg, fontSize: size * 0.36, boxShadow: `inset 0 0 0 1px ${col.dot}66` }}
     >
       {iniciales(c.nombre)}
     </div>
   );
+}
+
+const ICONOS_TURNO = { manana: Sun, tarde: Sunset, noche: Moon, reloj: Clock } as const;
+export const OPCIONES_ICONO: { id: IconoTurno; label: string }[] = [
+  { id: 'manana', label: 'Sol' },
+  { id: 'tarde', label: 'Atardecer' },
+  { id: 'noche', label: 'Luna' },
+  { id: 'reloj', label: 'Reloj' },
+];
+export function TurnoIcono({ icono, size = 16, className }: { icono: IconoTurno; size?: number; className?: string }) {
+  const I = ICONOS_TURNO[icono] ?? Clock;
+  return <I size={size} className={cx('shrink-0', className)} />;
 }
 
 export function Estrellas({ valor, onChange, size = 18 }: { valor: number; onChange?: (v: number) => void; size?: number }) {
@@ -94,7 +109,7 @@ export function Estrellas({ valor, onChange, size = 18 }: { valor: number; onCha
           onClick={() => onChange?.(i)}
           className={cx(onChange && 'cursor-pointer p-0.5 transition hover:scale-110')}
         >
-          <Star size={size} className={i <= valor ? 'fill-[#f6b73c] text-[#f6b73c]' : 'text-[#e3d6db]'} />
+          <Star size={size} className={i <= valor ? 'fill-[#e8a317] text-[#e8a317]' : 'text-[#d9dde3]'} />
         </button>
       ))}
     </div>
@@ -103,16 +118,18 @@ export function Estrellas({ valor, onChange, size = 18 }: { valor: number; onCha
 
 export function Rasgo({ nombre, activo = true, onClick }: { nombre: string; activo?: boolean; onClick?: () => void }) {
   const tono = tonoRasgo(nombre);
-  const col = tono === 'bueno' ? PALETA.menta : tono === 'ojo' ? PALETA.durazno : PALETA.lavanda;
+  const col =
+    tono === 'bueno' ? { bg: '#effaf3', fg: '#166534', bd: '#bbe5c9' }
+    : tono === 'ojo' ? { bg: '#fdf8eb', fg: '#92400e', bd: '#f0d9a6' }
+    : { bg: '#f3f4f6', fg: '#374151', bd: '#e5e7eb' };
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      className={cx('rounded-full px-2.5 py-1 text-xs font-bold transition', onClick && 'cursor-pointer', !activo && 'opacity-50 grayscale')}
-      style={activo ? { background: col.bg, color: col.fg } : { background: '#f6f1f3', color: '#7b6e80' }}
+      className={cx('rounded-md border px-2 py-0.5 text-xs font-medium transition', onClick && 'cursor-pointer')}
+      style={activo ? { background: col.bg, color: col.fg, borderColor: col.bd } : { background: '#fff', color: '#9ca3af', borderColor: '#e5e7eb' }}
     >
-      {tono === 'ojo' && activo ? '⚠ ' : ''}
       {nombre}
     </button>
   );
@@ -121,7 +138,7 @@ export function Rasgo({ nombre, activo = true, onClick }: { nombre: string; acti
 export function EstadoBadge({ estado }: { estado: Estado }) {
   const e = ESTADOS[estado];
   return (
-    <span className="rounded-full px-2 py-0.5 text-xs font-bold" style={{ background: e.bg, color: e.fg }}>
+    <span className="rounded-md px-2 py-0.5 text-xs font-medium" style={{ background: e.bg, color: e.fg }}>
       {e.label}
     </span>
   );
@@ -130,14 +147,14 @@ export function EstadoBadge({ estado }: { estado: Estado }) {
 export function Campo({ label, children, ayuda }: { label: string; children: ReactNode; ayuda?: string }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-bold text-suave">{label}</span>
+      <span className="mb-1.5 block text-sm font-medium text-tinta">{label}</span>
       {children}
       {ayuda && <span className="mt-1 block text-xs text-suave">{ayuda}</span>}
     </label>
   );
 }
 export const inputCls =
-  'w-full rounded-2xl border-2 border-linea bg-white px-4 py-2.5 text-base outline-none transition focus:border-rosa-2';
+  'w-full rounded-lg border border-[#d1d5db] bg-white px-3.5 py-2.5 text-base shadow-sm outline-none transition focus:border-primario focus:ring-3 focus:ring-primario/15';
 
 export function Segmentado<T extends string>({ opciones, valor, onChange }: { opciones: { id: T; label: ReactNode; bg?: string; fg?: string }[]; valor: T; onChange: (v: T) => void }) {
   return (
@@ -149,8 +166,11 @@ export function Segmentado<T extends string>({ opciones, valor, onChange }: { op
             key={o.id}
             type="button"
             onClick={() => onChange(o.id)}
-            className={cx('rounded-full border-2 px-3.5 py-2 text-sm font-bold transition', on ? 'border-tinta' : 'border-linea bg-white text-suave hover:border-rosa-2')}
-            style={on ? { background: o.bg ?? '#3a2f3d', color: o.fg ?? '#fff' } : undefined}
+            className={cx(
+              'inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition',
+              on ? 'border-primario ring-2 ring-primario/15' : 'border-[#d1d5db] bg-white text-suave hover:bg-fondo',
+            )}
+            style={on ? { background: o.bg ?? '#eef7f6', color: o.fg ?? '#0f6e6a', borderColor: o.fg ?? undefined } : undefined}
           >
             {o.label}
           </button>
@@ -163,22 +183,13 @@ export function Segmentado<T extends string>({ opciones, valor, onChange }: { op
 export function Logo({ compacto }: { compacto?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <svg viewBox="0 0 40 40" className="size-10 shrink-0 drop-shadow-sm" aria-hidden>
-        <circle cx="20" cy="20" r="18" fill="#fff" stroke="#f4a3bb" strokeWidth="3" />
-        <g fill="#3a2f3d">
-          <ellipse cx="13" cy="13" rx="4.5" ry="3" transform="rotate(-25 13 13)" />
-          <ellipse cx="25" cy="11" rx="2.2" ry="1.8" />
-          <ellipse cx="27" cy="23" rx="3.5" ry="4.5" transform="rotate(25 27 23)" />
-          <ellipse cx="13" cy="26" rx="3" ry="2.4" />
-          <ellipse cx="19" cy="19" rx="1.4" ry="1.2" />
-        </g>
-      </svg>
+      <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-primario text-white">
+        <HeartHandshake size={20} />
+      </div>
       {!compacto && (
-        <div className="leading-none">
-          <div className="font-display text-2xl font-semibold tracking-tight">
-            Pintitas<span className="text-rosa-2">.</span>
-          </div>
-          <div className="mt-0.5 text-[11px] font-bold uppercase tracking-widest text-suave">turnos · pagos · caja</div>
+        <div className="leading-tight">
+          <div className="text-[17px] font-semibold tracking-tight">Acompaña</div>
+          <div className="text-xs text-suave">Gestión de cuidadoras</div>
         </div>
       )}
     </div>
@@ -189,8 +200,8 @@ export function Titulo({ titulo, sub, children }: { titulo: string; sub?: ReactN
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">{titulo}</h1>
-        {sub && <p className="mt-1 text-suave">{sub}</p>}
+        <h1 className="text-2xl font-semibold tracking-tight">{titulo}</h1>
+        {sub && <p className="mt-0.5 text-sm text-suave">{sub}</p>}
       </div>
       {children && <div className="flex flex-wrap gap-2">{children}</div>}
     </div>
