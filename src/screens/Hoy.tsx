@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { AlertTriangle, Cake, CalendarPlus, CheckCircle2, ChevronRight, Plus, Wallet } from 'lucide-react';
+import { AlertTriangle, CalendarPlus, CheckCircle2, ChevronRight, Plus, Wallet } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Asignacion, Estado } from '../lib/types';
 import { ESTADOS } from '../lib/types';
-import { clp, diasACumple, diasEntre, edad, fmtDia, fmtHora, fmtHoras, fmtLargo, hoy, lunesDe, sumarDias } from '../lib/fechas';
+import { clp, diasEntre, fmtDia, fmtHora, fmtHoras, fmtLargo, hoy, lunesDe, sumarDias } from '../lib/fechas';
 import { horario, horasDe, huecos, resumenSemana } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
-import { Avatar, Boton, Card, TurnoIcono, cx, primerNombre } from '../components/ui';
+import { Avatar, Boton, Card, TurnoIcono, cx } from '../components/ui';
 import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
 import type { Tab } from '../App';
 
@@ -24,9 +24,6 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
   }, 0);
   const pendientes = huecos(db, h, 7);
   const faltanTotal = pendientes.reduce((s, p) => s + p.faltan, 0);
-  const cumples = db.cuidadoras
-    .filter((c) => c.activa && diasACumple(c.fechaNacimiento) <= 14)
-    .sort((a, b) => diasACumple(a.fechaNacimiento) - diasACumple(b.fechaNacimiento));
 
   const horaSaludo = new Date().getHours();
   const saludo = horaSaludo < 12 ? 'Buenos días' : horaSaludo < 20 ? 'Buenas tardes' : 'Buenas noches';
@@ -52,7 +49,7 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
       </div>
 
       {/* Indicadores */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
         <button onClick={() => ir('pagos')} className="rounded-xl border border-linea bg-white p-4 text-left shadow-[0_1px_2px_rgba(16,24,40,.04)] transition hover:border-primario-200">
           <div className="flex items-center gap-2 text-sm text-suave">
             <Wallet size={16} /> A pagar el domingo {fmtDia(domingo).split(' ').slice(1).join(' ')}
@@ -68,26 +65,6 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
             {pendientes.length ? `${faltanTotal} cupo${faltanTotal > 1 ? "s" : ""} sin cubrir` : "Todo cubierto"}
           </div>
           <div className="text-xs text-suave">{pendientes.length ? 'Revisa la lista de abajo' : 'Todos los turnos tienen cuidadora'}</div>
-        </div>
-        <div className="rounded-xl border border-linea bg-white p-4">
-          <div className="flex items-center gap-2 text-sm text-suave">
-            <Cake size={16} /> Cumpleaños próximos
-          </div>
-          {cumples.length === 0 ? (
-            <div className="mt-1 text-sm text-suave">Ninguno en las próximas 2 semanas</div>
-          ) : (
-            <ul className="mt-1.5 space-y-1">
-              {cumples.slice(0, 2).map((c) => {
-                const d = diasACumple(c.fechaNacimiento);
-                return (
-                  <li key={c.id} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="font-medium">{primerNombre(c.nombre)} <span className="text-suave">({edad(c.fechaNacimiento) + 1})</span></span>
-                    <span className="text-suave">{d === 0 ? 'hoy' : d === 1 ? 'mañana' : `en ${d} días`}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
         </div>
       </div>
 

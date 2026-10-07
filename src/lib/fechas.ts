@@ -38,14 +38,6 @@ export const edad = (nac: string) => {
   if (h.getMonth() < n.getMonth() || (h.getMonth() === n.getMonth() && h.getDate() < n.getDate())) e--;
   return e;
 };
-/** Días que faltan para el próximo cumpleaños (0 = hoy). */
-export const diasACumple = (nac: string) => {
-  const n = parse(nac);
-  const h = parse(hoy());
-  let c = new Date(h.getFullYear(), n.getMonth(), n.getDate());
-  if (c < h) c = new Date(h.getFullYear() + 1, n.getMonth(), n.getDate());
-  return Math.round((c.getTime() - h.getTime()) / 86400000);
-};
 
 export const aMin = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number);
