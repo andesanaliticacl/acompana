@@ -1,4 +1,4 @@
-import type { Asignacion, Cliente, Cuidadora, DB, Movimiento, Piso, Turno } from './types';
+import type { Asignacion, Cliente, Cuidadora, DB, Movimiento, Persona, Piso, Turno } from './types';
 import { hoy, lunesDe, sumarDias, uid } from './fechas';
 import { horario, resumenSemana } from './calculos';
 
@@ -19,30 +19,25 @@ export const PISOS_BASE: Piso[] = [
   { id: 'p3', nombre: 'Piso 3' },
 ];
 
+// Clientes = apoderados que contratan y pagan
 export const CLIENTES_BASE: Cliente[] = [
-  {
-    id: 'k1', nombre: 'Inés Larraín', pisoId: 'p1', fechaNacimiento: '1938-04-02', contacto: 'Carolina Larraín (hija)', telefono: '+56 9 5555 0201',
-    cuidados: 'Alzheimer moderado. Necesita compañía permanente; se desorienta de noche.', requeridas: { dia: 1, noche: 1 }, cobroSemanal: 1180000, activo: true,
-  },
-  {
-    id: 'k2', nombre: 'Hernán Pérez', pisoId: 'p1', fechaNacimiento: '1941-09-15', contacto: 'Jorge Pérez (hijo)', telefono: '+56 9 5555 0202',
-    cuidados: 'Diabético, insulina 8:00 y 20:00. Camina con andador.', requeridas: { dia: 1, noche: 0 }, cobroSemanal: 640000, activo: true,
-  },
-  {
-    id: 'k3', nombre: 'Olga Ibáñez', pisoId: 'p2', fechaNacimiento: '1935-12-08', contacto: 'Marcela Ibáñez (sobrina)', telefono: '+56 9 5555 0203',
-    cuidados: 'Postrada. Cambio de posición cada 2 horas, dieta blanda.', requeridas: { dia: 1, noche: 1 }, cobroSemanal: 1120000, activo: true,
-  },
-  {
-    id: 'k4', nombre: 'Teresa Morales', pisoId: 'p2', fechaNacimiento: '1944-06-21', contacto: 'Andrés Morales (hijo)', telefono: '+56 9 5555 0204',
-    cuidados: 'Autovalente. Apoyo en ducha, comidas y paseo diario.', requeridas: { dia: 1, noche: 0 }, cobroSemanal: 560000, activo: true,
-  },
-  {
-    id: 'k5', nombre: 'Raúl Soto', pisoId: 'p3', fechaNacimiento: '1939-02-27', contacto: 'Patricia Soto (hija)', telefono: '+56 9 5555 0205',
-    cuidados: 'Parkinson. Riesgo de caídas: acompañar siempre al baño.', requeridas: { dia: 1, noche: 1 }, cobroSemanal: 1080000, activo: true,
-  },
+  { id: 'k1', nombre: 'Carolina Larraín', telefono: '+56 9 5555 0201', cobroSemanal: 1180000, activo: true },
+  { id: 'k2', nombre: 'Jorge Pérez', telefono: '+56 9 5555 0202', cobroSemanal: 640000, activo: true },
+  { id: 'k3', nombre: 'Marcela Ibáñez', telefono: '+56 9 5555 0203', cobroSemanal: 1120000, activo: true },
+  { id: 'k4', nombre: 'Andrés Morales', telefono: '+56 9 5555 0204', cobroSemanal: 560000, activo: true },
+  { id: 'k5', nombre: 'Patricia Soto', telefono: '+56 9 5555 0205', cobroSemanal: 1080000, activo: true },
 ];
-// A qué cliente va cada puesto del plan (por orden)
-const PUESTO_CLIENTE: Record<string, string[]> = { dia: ['k1', 'k2', 'k3', 'k4', 'k5'], noche: ['k1', 'k3', 'k5'] };
+
+// Personas cuidadas (adultos mayores), cada una a cargo de un cliente
+export const PERSONAS_BASE: Persona[] = [
+  { id: 'r1', clienteId: 'k1', nombre: 'Inés Larraín', pisoId: 'p1', fechaNacimiento: '1938-04-02', cuidados: 'Alzheimer moderado. Se desorienta de noche.', requeridas: { dia: 1, noche: 1 }, activa: true },
+  { id: 'r2', clienteId: 'k2', nombre: 'Hernán Pérez', pisoId: 'p1', fechaNacimiento: '1941-09-15', cuidados: 'Diabético, insulina 8:00 y 20:00. Camina con andador.', requeridas: { dia: 1, noche: 0 }, activa: true },
+  { id: 'r3', clienteId: 'k3', nombre: 'Olga Ibáñez', pisoId: 'p2', fechaNacimiento: '1935-12-08', cuidados: 'Postrada. Cambio de posición cada 2 horas.', requeridas: { dia: 1, noche: 1 }, activa: true },
+  { id: 'r4', clienteId: 'k4', nombre: 'Teresa Morales', pisoId: 'p2', fechaNacimiento: '1944-06-21', cuidados: 'Autovalente. Apoyo en ducha y comidas.', requeridas: { dia: 1, noche: 0 }, activa: true },
+  { id: 'r5', clienteId: 'k5', nombre: 'Raúl Soto', pisoId: 'p3', fechaNacimiento: '1939-02-27', cuidados: 'Parkinson. Riesgo de caídas.', requeridas: { dia: 1, noche: 1 }, activa: true },
+];
+// A qué persona va cada puesto del plan (por orden)
+const PUESTO_PERSONA: Record<string, string[]> = { dia: ['r1', 'r2', 'r3', 'r4', 'r5'], noche: ['r1', 'r3', 'r5'] };
 
 type Base = Omit<Cuidadora, 'id' | 'activa' | 'notas' | 'telefono'> & { notas?: string };
 const c = (n: number, b: Base): Cuidadora => ({
@@ -96,14 +91,14 @@ export function crearSeed(): DB {
           } else if (fecha === h && t.id === 'dia' && horaActual >= 9) {
             estado = cid === 'c3' ? 'atraso' : 'asistio';
           }
-          asignaciones.push({ id: uid(), fecha, turnoId: t.id, clienteId: PUESTO_CLIENTE[t.id][i], cuidadoraId: cid, ...horario(t, fecha), estado });
+          asignaciones.push({ id: uid(), fecha, turnoId: t.id, personaId: PUESTO_PERSONA[t.id][i], cuidadoraId: cid, ...horario(t, fecha), estado });
         });
       }
     }
   }
   // Ejemplo de horas sueltas: reemplazo corto de 4 horas
   asignaciones.push({
-    id: uid(), fecha: sumarDias(lunes, -5), turnoId: 'dia', clienteId: 'k4', cuidadoraId: 'c12', inicio: '16:00', fin: '20:00',
+    id: uid(), fecha: sumarDias(lunes, -5), turnoId: 'dia', personaId: 'r4', cuidadoraId: 'c12', inicio: '16:00', fin: '20:00',
     estado: 'asistio', nota: 'Reemplazo de Patricia (horas sueltas)',
   });
 
@@ -120,7 +115,7 @@ export function crearSeed(): DB {
     if (semana === -2) add(2, { tipo: 'gasto', concepto: 'Uniformes', monto: 96000, medio: 'transferencia' });
   }
 
-  const db: DB = { cuidadoras: CUIDADORAS, turnos: TURNOS_BASE, pisos: PISOS_BASE, clientes: CLIENTES_BASE, asignaciones, pagos: [], movimientos, ajustes: { nombreDuena: '' } };
+  const db: DB = { cuidadoras: CUIDADORAS, turnos: TURNOS_BASE, pisos: PISOS_BASE, clientes: CLIENTES_BASE, personas: PERSONAS_BASE, asignaciones, pagos: [], movimientos, ajustes: { nombreDuena: '' } };
 
   // Semanas anteriores ya pagadas el domingo
   for (const semana of [-6, -5, -4, -3, -2, -1]) {
@@ -136,5 +131,5 @@ export function crearSeed(): DB {
 }
 
 export const dbVacia = (): DB => ({
-  cuidadoras: [], turnos: TURNOS_BASE, pisos: PISOS_BASE, clientes: [], asignaciones: [], pagos: [], movimientos: [], ajustes: { nombreDuena: '' },
+  cuidadoras: [], turnos: TURNOS_BASE, pisos: PISOS_BASE, clientes: [], personas: [], asignaciones: [], pagos: [], movimientos: [], ajustes: { nombreDuena: '' },
 });

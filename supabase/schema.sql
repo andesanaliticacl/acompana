@@ -46,18 +46,25 @@ create table pisos (
   orden smallint not null default 0
 );
 
-create table clientes (
+create table clientes (                        -- apoderado que contrata y paga
   id uuid primary key default gen_random_uuid(),
   agencia_id uuid not null references agencias(id) on delete cascade,
+  nombre text not null,
+  telefono text,
+  cobro_semanal int not null default 0,
+  activo boolean not null default true
+);
+
+create table personas (                        -- adulto mayor cuidado, a cargo de un cliente
+  id uuid primary key default gen_random_uuid(),
+  agencia_id uuid not null references agencias(id) on delete cascade,
+  persona_id uuid references personas(id) on delete set null,
   piso_id uuid references pisos(id) on delete set null,
   nombre text not null,
   fecha_nacimiento date,
-  contacto text,                               -- familiar responsable
-  telefono text,
   cuidados text,
   requeridas jsonb not null default '{}',     -- { "<turno_id>": cuidadoras necesarias }
-  cobro_semanal int not null default 0,
-  activo boolean not null default true
+  activa boolean not null default true
 );
 
 create type estado_turno as enum ('programado', 'asistio', 'atraso', 'falto');
@@ -67,8 +74,8 @@ create table asignaciones (
   agencia_id uuid not null references agencias(id) on delete cascade,
   fecha date not null,
   turno_id uuid not null references turnos(id),
-  cliente_id uuid references clientes(id) on delete set null,
-  piso_id uuid references pisos(id) on delete set null,          -- solo si no hay cliente
+  persona_id uuid references personas(id) on delete set null,
+  piso_id uuid references pisos(id) on delete set null,          -- solo si no hay persona
   cuidadora_id uuid not null references cuidadoras(id),
   inicio time not null,
   fin time not null,
@@ -107,6 +114,7 @@ alter table cuidadoras enable row level security;
 alter table turnos enable row level security;
 alter table pisos enable row level security;
 alter table clientes enable row level security;
+alter table personas enable row level security;
 alter table asignaciones enable row level security;
 alter table pagos enable row level security;
 alter table movimientos enable row level security;
@@ -123,6 +131,9 @@ create policy "por agencia" on pisos for all
   using (agencia_id in (select id from agencias where owner_id = auth.uid()))
   with check (agencia_id in (select id from agencias where owner_id = auth.uid()));
 create policy "por agencia" on clientes for all
+  using (agencia_id in (select id from agencias where owner_id = auth.uid()))
+  with check (agencia_id in (select id from agencias where owner_id = auth.uid()));
+create policy "por agencia" on personas for all
   using (agencia_id in (select id from agencias where owner_id = auth.uid()))
   with check (agencia_id in (select id from agencias where owner_id = auth.uid()));
 create policy "por agencia" on asignaciones for all

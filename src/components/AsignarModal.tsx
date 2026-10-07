@@ -4,7 +4,7 @@ import { useStore } from '../state/store';
 import type { Asignacion, Estado } from '../lib/types';
 import { ESTADOS } from '../lib/types';
 import { fmtHoras, fmtLargo, uid } from '../lib/fechas';
-import { clientesActivos, horario, horasDe, linkWhatsApp, requeridasCliente, requeridasTurno, turnoSugerido } from '../lib/calculos';
+import { horario, horasDe, linkWhatsApp, personasActivas, requeridasPersona, requeridasTurno, turnoSugerido } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
 import { Avatar, Boton, Campo, Modal, Segmentado, TurnoIcono, cx, inputCls, primerNombre } from './ui';
 
@@ -12,7 +12,7 @@ export interface AsignarInicial {
   id?: string;
   fecha: string;
   turnoId?: string;
-  clienteId?: string;
+  personaId?: string;
   cuidadoraId?: string;
 }
 
@@ -26,7 +26,7 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
   const t0 = db.turnos.find((t) => t.id === inicial.turnoId) ?? db.turnos[0];
   const [f, setF] = useState<Asignacion>(
     existente ?? {
-      id: uid(), fecha: inicial.fecha, turnoId: t0.id, clienteId: inicial.clienteId, cuidadoraId: '', ...horario(t0, inicial.fecha), estado: 'programado', nota: '',
+      id: uid(), fecha: inicial.fecha, turnoId: t0.id, personaId: inicial.personaId, cuidadoraId: '', ...horario(t0, inicial.fecha), estado: 'programado', nota: '',
     },
   );
   const [elegidas, setElegidas] = useState<string[]>(existente ? [existente.cuidadoraId] : inicial.cuidadoraId ? [inicial.cuidadoraId] : []);
@@ -37,12 +37,13 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
   const ocupadas = new Map(
     db.asignaciones.filter((a) => a.fecha === f.fecha && a.id !== f.id).map((a) => [a.cuidadoraId, a]),
   );
-  const cliente = db.clientes.find((k) => k.id === f.clienteId);
-  const piso = db.pisos.find((p) => p.id === cliente?.pisoId);
+  const persona = db.personas.find((k) => k.id === f.personaId);
+  const cliente = db.clientes.find((k) => k.id === persona?.clienteId);
+  const piso = db.pisos.find((p) => p.id === persona?.pisoId);
   const enEsteTurno = db.asignaciones.filter(
-    (a) => a.fecha === f.fecha && a.turnoId === f.turnoId && a.id !== f.id && a.estado !== 'falto' && (!cliente || a.clienteId === cliente.id),
+    (a) => a.fecha === f.fecha && a.turnoId === f.turnoId && a.id !== f.id && a.estado !== 'falto' && (!persona || a.personaId === persona.id),
   ).length;
-  const requeridas = cliente && turno ? requeridasCliente(cliente, turno.id) : turno ? requeridasTurno(db, turno) : 1;
+  const requeridas = persona && turno ? requeridasPersona(persona, turno.id) : turno ? requeridasTurno(db, turno) : 1;
   const total = enEsteTurno + elegidas.length;
   const activas = db.cuidadoras
     .filter((c) => c.activa || elegidas.includes(c.id))
@@ -79,7 +80,7 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
 
   const unica = elegidas.length === 1 ? db.cuidadoras.find((c) => c.id === elegidas[0]) : undefined;
   const msg = unica && turno
-    ? `Hola ${primerNombre(unica.nombre)}, te confirmo turno de ${turno.nombre.toLowerCase()}${cliente ? ` con ${cliente.nombre}${piso ? ` (${piso.nombre})` : ""}` : ""} el ${fmtLargo(f.fecha)}, de ${f.inicio} a ${f.fin} hrs. Gracias.`
+    ? `Hola ${primerNombre(unica.nombre)}, te confirmo turno de ${turno.nombre.toLowerCase()}${persona ? ` con ${persona.nombre}${piso ? ` (${piso.nombre})` : ""}` : ""} el ${fmtLargo(f.fecha)}, de ${f.inicio} a ${f.fin} hrs. Gracias.`
     : '';
 
   return (
@@ -106,17 +107,17 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
           </Campo>
         </div>
 
-        {db.clientes.length > 0 && (
-          <Campo label="Cliente">
-            <select className={inputCls} value={f.clienteId ?? ''} onChange={(e) => set({ clienteId: e.target.value || undefined })}>
-              <option value="">Sin cliente específico</option>
+        {db.personas.length > 0 && (
+          <Campo label="Persona cuidada">
+            <select className={inputCls} value={f.personaId ?? ''} onChange={(e) => set({ personaId: e.target.value || undefined })}>
+              <option value="">Sin persona específica</option>
               {[...db.pisos, { id: '', nombre: 'Sin piso' }].map((p) => {
-                const cs = clientesActivos(db).filter((k) => (k.pisoId ?? '') === p.id);
+                const cs = personasActivas(db).filter((k) => (k.pisoId ?? '') === p.id);
                 if (!cs.length) return null;
                 return (
                   <optgroup key={p.id || 'sin'} label={p.nombre}>
                     {cs.map((k) => {
-                      const req = turno ? requeridasCliente(k, turno.id) : 0;
+                      const req = turno ? requeridasPersona(k, turno.id) : 0;
                       return (
                         <option key={k.id} value={k.id}>
                           {k.nombre}{turno && !req ? ` (no requiere turno ${turno.nombre.toLowerCase()})` : ''}
@@ -127,7 +128,7 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
                 );
               })}
             </select>
-            {piso && <span className="mt-1 block text-xs text-suave">{piso.nombre}{cliente?.cuidados ? ` · ${cliente.cuidados}` : ''}</span>}
+            {persona && <span className="mt-1 block text-xs text-suave">{[piso?.nombre, cliente ? `Cliente: ${cliente.nombre}` : '', persona.cuidados].filter(Boolean).join(' · ')}</span>}
           </Campo>
         )}
 
@@ -148,7 +149,7 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
         <Campo label={existente ? 'Cuidadora' : 'Cuidadoras (puedes elegir varias)'}>
           {!existente && (
             <div className="mb-2 flex items-center justify-between rounded-lg bg-fondo px-3 py-2 text-sm">
-              <span className="text-suave">{cliente ? `${cliente.nombre} · ${turno?.nombre ?? ''}` : 'Cobertura del turno'}</span>
+              <span className="text-suave">{persona ? `${persona.nombre} · ${turno?.nombre ?? ''}` : 'Cobertura del turno'}</span>
               <span className={cx('font-semibold tabular-nums', total >= requeridas ? 'text-ok' : 'text-alerta')}>
                 {total} de {requeridas} {total >= requeridas ? '· completo' : `· faltan ${requeridas - total}`}
               </span>

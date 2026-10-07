@@ -4,7 +4,7 @@ import { useStore } from '../state/store';
 import type { Asignacion, Estado } from '../lib/types';
 import { ESTADOS } from '../lib/types';
 import { clp, diasEntre, fmtDia, fmtHora, fmtHoras, fmtLargo, hoy, lunesDe, sumarDias } from '../lib/fechas';
-import { clienteDe, horario, horasDe, huecos, pisoDe, requeridasTurno, resumenSemana } from '../lib/calculos';
+import { horario, horasDe, huecos, personaDe, pisoDe, requeridasTurno, resumenSemana } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
 import { Avatar, Boton, Card, TurnoIcono, cx } from '../components/ui';
 import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
@@ -178,7 +178,7 @@ function FilaTurno({
                 <div className="min-w-0">
                   <div className={cx('truncate text-sm font-medium hover:underline', a.estado === 'falto' && 'text-suave line-through')}>{c.nombre}</div>
                   <div className="text-xs text-suave">
-                    {[clienteDe(db, a)?.nombre, db.pisos.find((p) => p.id === pisoDe(db, a))?.nombre].filter(Boolean).map((s) => `${s} · `).join("")}{fmtHora(a.inicio)}–{fmtHora(a.fin)} h · {fmtHoras(horasDe(a))}
+                    {[personaDe(db, a)?.nombre, db.pisos.find((p) => p.id === pisoDe(db, a))?.nombre].filter(Boolean).map((s) => `${s} · `).join("")}{fmtHora(a.inicio)}–{fmtHora(a.fin)} h · {fmtHoras(horasDe(a))}
                     {a.nota ? ` · ${a.nota}` : ''}
                   </div>
                 </div>

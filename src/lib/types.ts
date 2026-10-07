@@ -35,8 +35,8 @@ export interface Asignacion {
   id: string;
   fecha: string; // día en que empieza el turno
   turnoId: string;
-  clienteId?: string; // a quién cuida en ese turno (el piso sale del cliente)
-  pisoId?: string; // solo si no tiene cliente
+  personaId?: string; // a quién cuida en ese turno (el piso sale de la persona)
+  pisoId?: string; // solo si no tiene persona
   cuidadoraId: string;
   inicio: string;
   fin: string;
@@ -75,6 +75,7 @@ export interface DB {
   turnos: Turno[];
   pisos: Piso[];
   clientes: Cliente[];
+  personas: Persona[];
   asignaciones: Asignacion[];
   pagos: Pago[];
   movimientos: Movimiento[];
@@ -107,16 +108,23 @@ export const ESTADOS: Record<Estado, { label: string; corto: string; bg: string;
   falto: { label: 'Faltó', corto: 'No vino', bg: '#fdf3f2', fg: '#b42318' },
 };
 
-/** Cliente = adulto mayor atendido. `requeridas[turnoId]` = cuidadoras que necesita en ese turno. */
+/** Cliente = apoderado que contrata y paga el servicio. */
 export interface Cliente {
   id: string;
   nombre: string;
-  pisoId?: string;
-  fechaNacimiento?: string;
-  contacto: string; // familiar responsable
   telefono: string;
-  cuidados: string; // diagnóstico, movilidad, dieta, medicamentos…
-  requeridas: Record<string, number>;
   cobroSemanal: number; // CLP
   activo: boolean;
+}
+
+/** Persona cuidada (adulto mayor) a cargo de un cliente. `requeridas[turnoId]` = cuidadoras que necesita en ese turno. */
+export interface Persona {
+  id: string;
+  clienteId?: string;
+  nombre: string;
+  pisoId?: string;
+  fechaNacimiento?: string;
+  cuidados: string; // diagnóstico, movilidad, dieta, medicamentos…
+  requeridas: Record<string, number>;
+  activa: boolean;
 }
