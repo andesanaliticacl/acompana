@@ -78,7 +78,7 @@ export function horario(t: Turno, fecha: string) {
   return ex && ex.dia === diaSemana(fecha) ? { inicio: ex.inicio, fin: ex.fin } : { inicio: t.inicio, fin: t.fin };
 }
 
-/** Persona cuidada de una asignación, su cliente (apoderado) y el piso donde se trabaja. */
+/** Residente de una asignación, su cliente (apoderado) y el piso donde se trabaja. */
 export const personaDe = (db: DB, a: Pick<Asignacion, 'personaId'>) =>
   a.personaId ? db.personas.find((p) => p.id === a.personaId) : undefined;
 export const clienteDe = (db: DB, a: Pick<Asignacion, 'personaId'>) => {

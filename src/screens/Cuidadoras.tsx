@@ -4,15 +4,15 @@ import { useStore } from '../state/store';
 import type { Cuidadora } from '../lib/types';
 import { ESTADOS, RASGOS } from '../lib/types';
 import { clp, edad, fmtDia, fmtHora, fmtHoras } from '../lib/fechas';
-import { estadisticas, linkWhatsApp } from '../lib/calculos';
+import { estadisticas, linkWhatsApp, personaDe } from '../lib/calculos';
 import { COLORES, PALETA } from '../lib/colores';
 import { uid } from '../lib/fechas';
 import { Avatar, Boton, Campo, Card, Estrellas, Modal, Rasgo, Titulo, TurnoIcono, cx, inputCls, primerNombre } from '../components/ui';
 
-export function Cuidadoras() {
+export function Cuidadoras({ param }: { param?: string }) {
   const { db } = useStore();
   const [q, setQ] = useState('');
-  const [verId, setVerId] = useState<string | null>(null);
+  const [verId, setVerId] = useState<string | null>(param ?? null);
   const [editar, setEditar] = useState<Cuidadora | null>(null);
   const [verInactivas, setVerInactivas] = useState(false);
 
@@ -160,7 +160,7 @@ function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; o
           <ul className="space-y-1.5">
             {s.proximos.map((a) => (
               <li key={a.id} className="flex justify-between rounded-lg border border-linea bg-white px-3 py-2 text-sm">
-                <span className="flex items-center gap-2 font-medium">{turno(a.turnoId) && <TurnoIcono icono={turno(a.turnoId)!.icono} size={14} className="text-suave" />} {fmtDia(a.fecha)}</span>
+                <span className="flex items-center gap-2 font-medium">{turno(a.turnoId) && <TurnoIcono icono={turno(a.turnoId)!.icono} size={14} className="text-suave" />} {fmtDia(a.fecha)}{personaDe(db, a) && <span className="font-normal text-suave">· {personaDe(db, a)!.nombre}</span>}</span>
                 <span className="text-suave">{fmtHora(a.inicio)}–{fmtHora(a.fin)} h</span>
               </li>
             ))}
@@ -171,7 +171,7 @@ function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; o
           <ul className="space-y-1.5">
             {s.ultimos.map((a) => (
               <li key={a.id} className="flex items-center justify-between rounded-lg border border-linea bg-white px-3 py-2 text-sm">
-                <span className="flex items-center gap-2 font-medium">{turno(a.turnoId) && <TurnoIcono icono={turno(a.turnoId)!.icono} size={14} className="text-suave" />} {fmtDia(a.fecha)}</span>
+                <span className="flex items-center gap-2 font-medium">{turno(a.turnoId) && <TurnoIcono icono={turno(a.turnoId)!.icono} size={14} className="text-suave" />} {fmtDia(a.fecha)}{personaDe(db, a) && <span className="font-normal text-suave">· {personaDe(db, a)!.nombre}</span>}</span>
                 <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: ESTADOS[a.estado].bg, color: ESTADOS[a.estado].fg }}>
                   {ESTADOS[a.estado].label}
                 </span>

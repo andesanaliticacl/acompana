@@ -108,9 +108,9 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
         </div>
 
         {db.personas.length > 0 && (
-          <Campo label="Persona cuidada">
+          <Campo label="Residente">
             <select className={inputCls} value={f.personaId ?? ''} onChange={(e) => set({ personaId: e.target.value || undefined })}>
-              <option value="">Sin persona específica</option>
+              <option value="">Sin residente específico</option>
               {[...db.pisos, { id: '', nombre: 'Sin piso' }].map((p) => {
                 const cs = personasActivas(db).filter((k) => (k.pisoId ?? '') === p.id);
                 if (!cs.length) return null;

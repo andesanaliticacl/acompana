@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, HeartPulse, PiggyBank, Settings, Sun, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { CalendarDays, HeartPulse, PiggyBank, Search, Settings, Sun, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { Hoy } from './screens/Hoy';
 import { Semana } from './screens/Semana';
 import { Cuidadoras } from './screens/Cuidadoras';
@@ -7,6 +7,7 @@ import { Clientes } from './screens/Clientes';
 import { Pagos } from './screens/Pagos';
 import { Caja } from './screens/Caja';
 import { Ajustes } from './screens/Ajustes';
+import { Buscador } from './components/Buscador';
 import { Logo, cx } from './components/ui';
 
 export type Tab = 'hoy' | 'semana' | 'cuidadoras' | 'clientes' | 'pagos' | 'caja' | 'ajustes';
@@ -20,24 +21,42 @@ const NAV: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: 'caja', label: 'Caja', icon: PiggyBank },
 ];
 
-const leerTab = (): Tab => {
-  const h = window.location.hash.slice(1) as Tab;
-  return [...NAV.map((n) => n.id), 'ajustes'].includes(h) ? h : 'hoy';
+/** Ruta en el hash: "#tab" o "#tab:parámetro" (ej. #cuidadoras:c3, #semana:Inés). */
+const leerRuta = (): { tab: Tab; param?: string } => {
+  const [t, ...resto] = window.location.hash.slice(1).split(':');
+  const tab = ([...NAV.map((n) => n.id), 'ajustes'] as string[]).includes(t) ? (t as Tab) : 'hoy';
+  const param = resto.length ? decodeURIComponent(resto.join(':')) : undefined;
+  return { tab, param };
 };
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>(leerTab);
+  const [ruta, setRuta] = useState(leerRuta);
+  const [buscar, setBuscar] = useState(false);
+  const { tab, param } = ruta;
 
   useEffect(() => {
-    const f = () => setTab(leerTab());
+    const f = () => setRuta(leerRuta());
+    const atajo = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setBuscar(true);
+      }
+    };
     window.addEventListener('hashchange', f);
-    return () => window.removeEventListener('hashchange', f);
+    window.addEventListener('keydown', atajo);
+    return () => {
+      window.removeEventListener('hashchange', f);
+      window.removeEventListener('keydown', atajo);
+    };
   }, []);
 
-  const ir = (t: Tab) => {
-    window.location.hash = t;
+  const ir = (t: Tab, p?: string) => {
+    window.location.hash = p ? `${t}:${encodeURIComponent(p)}` : t;
     window.scrollTo({ top: 0 });
   };
+
+  // La clave fuerza a la pantalla a reiniciarse cuando cambia el parámetro
+  const k = `${tab}:${param ?? ''}`;
 
   return (
     <div className="min-h-screen lg:flex">
@@ -45,6 +64,15 @@ export default function App() {
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-linea bg-white lg:flex">
         <div className="border-b border-linea px-5 py-4">
           <Logo />
+        </div>
+        <div className="px-3 pt-3">
+          <button
+            onClick={() => setBuscar(true)}
+            className="flex w-full items-center gap-2 rounded-lg border border-[#d1d5db] bg-white px-3 py-2 text-left text-sm text-suave shadow-sm hover:bg-fondo"
+          >
+            <Search size={16} /> <span className="flex-1">Buscar…</span>
+            <kbd className="rounded border border-linea bg-fondo px-1.5 text-[10px]">Ctrl K</kbd>
+          </button>
         </div>
         <nav className="mt-2 flex-1 space-y-0.5 px-3">
           {NAV.map((n) => (
@@ -58,20 +86,25 @@ export default function App() {
 
       {/* Encabezado (celular) */}
       <header className="sticky top-0 z-30 border-b border-linea bg-white/90 backdrop-blur lg:hidden">
-        <div className="flex items-center justify-between px-4 py-2.5">
+        <div className="flex items-center justify-between gap-2 px-4 py-2.5">
           <Logo />
-          <button onClick={() => ir('ajustes')} className={cx('rounded-lg p-2.5', tab === 'ajustes' ? 'bg-primario-50 text-primario' : 'text-suave')} aria-label="Ajustes">
-            <Settings size={22} />
-          </button>
+          <div className="flex gap-1">
+            <button onClick={() => setBuscar(true)} className="rounded-lg p-2.5 text-suave" aria-label="Buscar">
+              <Search size={22} />
+            </button>
+            <button onClick={() => ir('ajustes')} className={cx('rounded-lg p-2.5', tab === 'ajustes' ? 'bg-primario-50 text-primario' : 'text-suave')} aria-label="Ajustes">
+              <Settings size={22} />
+            </button>
+          </div>
         </div>
       </header>
 
       <main className="min-w-0 flex-1 px-4 pt-5 pb-28 sm:px-6 lg:px-10 lg:py-8">
         <div className="mx-auto max-w-6xl">
           {tab === 'hoy' && <Hoy ir={ir} />}
-          {tab === 'semana' && <Semana />}
-          {tab === 'cuidadoras' && <Cuidadoras />}
-          {tab === 'clientes' && <Clientes />}
+          {tab === 'semana' && <Semana key={k} param={param} />}
+          {tab === 'cuidadoras' && <Cuidadoras key={k} param={param} />}
+          {tab === 'clientes' && <Clientes key={k} param={param} />}
           {tab === 'pagos' && <Pagos />}
           {tab === 'caja' && <Caja />}
           {tab === 'ajustes' && <Ajustes />}
@@ -91,6 +124,8 @@ export default function App() {
           ))}
         </div>
       </nav>
+
+      {buscar && <Buscador onClose={() => setBuscar(false)} ir={(t, p) => { setBuscar(false); ir(t, p); }} />}
     </div>
   );
 }

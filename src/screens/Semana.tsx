@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { AlertTriangle, Building2, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Copy, Download, Plus, Users, X } from 'lucide-react';
+import { AlertTriangle, Building2, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Copy, Download, Plus, Search, Users, X } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Asignacion, Persona, Turno } from '../lib/types';
 import { ESTADOS } from '../lib/types';
 import { DIAS_CORTOS, diasSemana, fmtCorto, fmtDia, fmtHora, fmtHoras, fmtLargo, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
 import { asignacionesSemana, clienteDe, descargarCSV, horario, horasDe, huecos, personaDe, personasActivas, pisoDe, requeridasPersona, requeridasTurno, resumenSemana } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
-import { Avatar, Boton, Segmentado, Titulo, TurnoIcono, cx } from '../components/ui';
+import { Avatar, Boton, Segmentado, Titulo, TurnoIcono, cx, inputCls, primerNombre } from '../components/ui';
 import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
 
 type Vista = 'dia' | 'cuidadora';
@@ -19,10 +19,13 @@ const leerVista = (): Vista => {
   }
 };
 
-export function Semana() {
+export function Semana({ param }: { param?: string }) {
   const { db, upsertMuchos } = useStore();
   const h = hoy();
-  const [fecha, setFecha] = useState(h);
+  // param: una fecha (YYYY-MM-DD) o un texto para buscar en el día
+  const esFecha = !!param && /^\d{4}-\d{2}-\d{2}$/.test(param);
+  const [fecha, setFecha] = useState(esFecha ? param! : h);
+  const [filtro, setFiltro] = useState(param && !esFecha ? param : '');
   const [vista, setVistaState] = useState<Vista>(leerVista);
   const [modal, setModal] = useState<AsignarInicial | null>(null);
   const lunes = lunesDe(fecha);
@@ -50,7 +53,7 @@ export function Semana() {
   };
 
   const exportar = () => {
-    const filas: (string | number)[][] = [['Fecha', 'Turno', 'Piso', 'Persona cuidada', 'Cliente', 'Cuidadora', 'Desde', 'Hasta', 'Horas', 'Estado', 'Nota']];
+    const filas: (string | number)[][] = [['Fecha', 'Turno', 'Piso', 'Residente', 'Cliente', 'Cuidadora', 'Desde', 'Hasta', 'Horas', 'Estado', 'Nota']];
     for (const a of [...delaSemana].sort((x, y) => (x.fecha + x.inicio).localeCompare(y.fecha + y.inicio))) {
       filas.push([
         a.fecha, db.turnos.find((t) => t.id === a.turnoId)?.nombre ?? '',
@@ -139,7 +142,7 @@ export function Semana() {
       </div>
 
       {vista === 'dia' ? (
-        <VistaDia fecha={fecha} onModal={setModal} />
+        <VistaDia fecha={fecha} filtro={filtro} onFiltro={setFiltro} onModal={setModal} />
       ) : (
         <VistaCuidadoras dias={dias} lunes={lunes} delaSemana={delaSemana} onModal={setModal} />
       )}
@@ -149,7 +152,7 @@ export function Semana() {
   );
 }
 
-/* ───────────── Vista día a día: Día y Noche, por piso o por cliente ───────────── */
+/* ───────────── Vista día a día: una tabla, residentes en filas y turnos en columnas ───────────── */
 
 type Agrupar = 'piso' | 'cliente';
 
@@ -161,7 +164,7 @@ const leerAgrupar = (): Agrupar => {
   }
 };
 
-function VistaDia({ fecha, onModal }: { fecha: string; onModal: (i: AsignarInicial) => void }) {
+function VistaDia({ fecha, filtro, onFiltro, onModal }: { fecha: string; filtro: string; onFiltro: (v: string) => void; onModal: (i: AsignarInicial) => void }) {
   const { db } = useStore();
   const [agrupar, setAgruparState] = useState<Agrupar>(leerAgrupar);
   const setAgrupar = (v: Agrupar) => {
@@ -169,10 +172,52 @@ function VistaDia({ fecha, onModal }: { fecha: string; onModal: (i: AsignarInici
     try { localStorage.setItem('acompana-agrupar', v); } catch { /* ignorar */ }
   };
   const delDia = db.asignaciones.filter((a) => a.fecha === fecha);
+  const turnos = db.turnos;
+  const nombreCuidadora = (a: Asignacion) => db.cuidadoras.find((c) => c.id === a.cuidadoraId)?.nombre ?? '';
+
+  // Residentes que tienen algo ese día, filtrados por el buscador
+  const q = filtro.trim().toLowerCase();
+  const coincide = (...textos: (string | undefined)[]) => !q || textos.some((s) => s?.toLowerCase().includes(q));
+  const residentes = personasActivas(db)
+    .filter((p) => turnos.some((t) => requeridasPersona(p, t.id) > 0) || delDia.some((a) => a.personaId === p.id))
+    .filter((p) =>
+      coincide(p.nombre, db.clientes.find((c) => c.id === p.clienteId)?.nombre, ...delDia.filter((a) => a.personaId === p.id).map(nombreCuidadora)),
+    );
+  const sueltas = delDia.filter((a) => !db.personas.some((p) => p.id === a.personaId) && coincide(nombreCuidadora(a)));
+
+  const grupos =
+    agrupar === 'piso'
+      ? [...db.pisos, { id: '', nombre: 'Sin piso' }].map((pi) => ({ id: pi.id || 'sin', titulo: pi.nombre, rs: residentes.filter((p) => (p.pisoId ?? '') === pi.id) }))
+      : [
+          ...[...db.clientes].sort((a, b) => a.nombre.localeCompare(b.nombre)).map((c) => ({ id: c.id, titulo: c.nombre, rs: residentes.filter((p) => p.clienteId === c.id) })),
+          { id: 'sin', titulo: 'Sin cliente', rs: residentes.filter((p) => !db.clientes.some((c) => c.id === p.clienteId)) },
+        ];
+  const columnas = `minmax(0,1.1fr) repeat(${turnos.length}, minmax(0,1fr))`;
+
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">{fmtLargo(fecha)}</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          {turnos.map((t) => (
+            <span key={t.id} className="inline-flex items-center gap-1.5 text-sm text-suave">
+              <TurnoIcono icono={t.icono} size={15} /> {t.nombre}
+              <Cobertura hay={delDia.filter((a) => a.turnoId === t.id && a.estado !== 'falto').length} req={requeridasTurno(db, t)} />
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="relative min-w-52 flex-1">
+          <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-suave" />
+          <input className={cx(inputCls, '!py-2 pl-9')} placeholder="Buscar residente, cliente o cuidadora…" value={filtro} onChange={(e) => onFiltro(e.target.value)} />
+          {filtro && (
+            <button onClick={() => onFiltro('')} className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-suave hover:bg-fondo" aria-label="Limpiar búsqueda">
+              <X size={15} />
+            </button>
+          )}
+        </div>
         {db.personas.length > 0 && (
           <Segmentado<Agrupar>
             valor={agrupar}
@@ -184,130 +229,109 @@ function VistaDia({ fecha, onModal }: { fecha: string; onModal: (i: AsignarInici
           />
         )}
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {db.turnos.map((t) => (
-          <ColumnaTurno key={t.id} t={t} fecha={fecha} agrupar={agrupar} lista={delDia.filter((a) => a.turnoId === t.id)} onModal={onModal} />
+
+      <div className="overflow-hidden rounded-xl border border-linea bg-white shadow-[0_1px_2px_rgba(16,24,40,.04)]">
+        {/* Encabezado: Residente | Día | Noche */}
+        <div className="grid border-b border-linea" style={{ gridTemplateColumns: columnas }}>
+          <div className="px-3 py-2.5 text-xs font-medium text-suave">Residente</div>
+          {turnos.map((t) => {
+            const hor = horario(t, fecha);
+            return (
+              <div key={t.id} className="border-l border-linea px-3 py-2" style={{ background: PALETA[t.color].bg, color: PALETA[t.color].fg }}>
+                <div className="flex items-center gap-1.5 text-sm font-semibold"><TurnoIcono icono={t.icono} size={15} /> {t.nombre}</div>
+                <div className="text-xs">{fmtHora(hor.inicio)}–{fmtHora(hor.fin)} h</div>
+              </div>
+            );
+          })}
+        </div>
+
+        {grupos.filter((g) => g.rs.length).map((g) => (
+          <div key={g.id}>
+            <div className="border-b border-linea bg-fondo px-3 py-1.5 text-xs font-semibold tracking-wide text-suave uppercase">{g.titulo}</div>
+            {g.rs.map((p) => (
+              <div key={p.id} className="grid border-b border-linea last:border-b-0" style={{ gridTemplateColumns: columnas }}>
+                <div className="flex items-center px-3 py-2 text-sm font-medium">
+                  <span className="truncate" title={p.nombre}>{p.nombre}</span>
+                </div>
+                {turnos.map((t) => (
+                  <CeldaResidente key={t.id} p={p} t={t} fecha={fecha} items={delDia.filter((a) => a.personaId === p.id && a.turnoId === t.id)} onModal={onModal} />
+                ))}
+              </div>
+            ))}
+          </div>
         ))}
+
+        {sueltas.length > 0 && (
+          <div>
+            <div className="border-b border-linea bg-fondo px-3 py-1.5 text-xs font-semibold tracking-wide text-suave uppercase">Sin residente</div>
+            <div className="grid" style={{ gridTemplateColumns: columnas }}>
+              <div className="px-3 py-2 text-sm text-suave">—</div>
+              {turnos.map((t) => (
+                <div key={t.id} className="space-y-1 border-l border-linea p-1.5">
+                  {sueltas.filter((a) => a.turnoId === t.id).map((a) => <ChipCuidadora key={a.id} a={a} onClick={() => onModal({ fecha, id: a.id })} />)}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {residentes.length === 0 && sueltas.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-suave">{q ? `Nada coincide con “${filtro}” este día.` : 'No hay residentes registrados.'}</p>
+        )}
       </div>
-      <Leyenda />
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <Leyenda />
+        <Boton chico variante="suave" onClick={() => onModal({ fecha })}>
+          <Plus size={15} /> Asignar turno
+        </Boton>
+      </div>
     </div>
   );
 }
 
-/** Una fila = un puesto: persona cuidada → cuidadora (o "Asignar" si falta). */
-interface Fila { persona?: Persona; a?: Asignacion }
-
-function ColumnaTurno({ t, fecha, agrupar, lista, onModal }: { t: Turno; fecha: string; agrupar: Agrupar; lista: Asignacion[]; onModal: (i: AsignarInicial) => void }) {
-  const { db } = useStore();
-  const col = PALETA[t.color];
-  const hor = horario(t, fecha);
-  const especial = hor.inicio !== t.inicio || hor.fin !== t.fin;
-  const hay = lista.filter((a) => a.estado !== 'falto').length;
-  const req = requeridasTurno(db, t);
-
-  // Filas de una persona: sus cuidadoras + un hueco por cada cupo libre
-  const filasDe = (p: Persona): Fila[] => {
-    const items = lista.filter((a) => a.personaId === p.id);
-    const libres = Math.max(0, requeridasPersona(p, t.id) - items.filter((a) => a.estado !== 'falto').length);
-    return [...items.map((a) => ({ persona: p, a })), ...Array.from({ length: libres }, () => ({ persona: p }))];
-  };
-  const personas = personasActivas(db).filter((p) => requeridasPersona(p, t.id) > 0 || lista.some((a) => a.personaId === p.id));
-  const sueltas: Fila[] = lista.filter((a) => !personas.some((p) => p.id === a.personaId)).map((a) => ({ a }));
-
-  // Grupos según la vista elegida
-  let grupos: { id: string; titulo: string; filas: Fila[] }[];
-  if (!db.personas.length) {
-    grupos = [{ id: 'todas', titulo: '', filas: [...lista.map((a) => ({ a })), ...Array.from({ length: Math.max(0, req - hay) }, () => ({}))] }];
-  } else if (agrupar === 'piso') {
-    grupos = [...db.pisos, { id: '', nombre: 'Sin piso' }].map((pi) => ({
-      id: pi.id || 'sin',
-      titulo: pi.nombre,
-      filas: personas.filter((p) => (p.pisoId ?? '') === pi.id).flatMap(filasDe),
-    }));
-  } else {
-    grupos = [...db.clientes].sort((a, b) => a.nombre.localeCompare(b.nombre)).map((c) => ({
-      id: c.id,
-      titulo: c.nombre,
-      filas: personas.filter((p) => p.clienteId === c.id).flatMap(filasDe),
-    }));
-    grupos.push({ id: 'sin', titulo: 'Sin cliente', filas: personas.filter((p) => !db.clientes.some((c) => c.id === p.clienteId)).flatMap(filasDe) });
-  }
-  if (sueltas.length) grupos.push({ id: 'sueltas', titulo: 'Otras', filas: sueltas });
-  grupos = grupos.filter((g) => g.filas.length);
-
+/** Celda Residente × Turno: sus cuidadoras, "Asignar" si falta, o "—" si ese turno no aplica. */
+function CeldaResidente({ p, t, fecha, items, onModal }: { p: Persona; t: Turno; fecha: string; items: Asignacion[]; onModal: (i: AsignarInicial) => void }) {
+  const req = requeridasPersona(p, t.id);
+  const libres = Math.max(0, req - items.filter((a) => a.estado !== 'falto').length);
   return (
-    <section className="overflow-hidden rounded-xl border border-linea bg-white shadow-[0_1px_2px_rgba(16,24,40,.04)]">
-      <header className="flex items-center gap-3 border-b border-linea px-4 py-3" style={{ background: col.bg }}>
-        <span className="grid size-10 place-items-center rounded-lg bg-white" style={{ color: col.fg }}>
-          <TurnoIcono icono={t.icono} size={20} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-base font-semibold" style={{ color: col.fg }}>Turno {t.nombre.toLowerCase()}</div>
-          <div className="flex items-center gap-1.5 text-sm" style={{ color: col.fg }}>
-            {hor.inicio} a {hor.fin} h
-            {especial && <span className="rounded bg-white/70 px-1.5 text-[11px] font-semibold">Horario especial</span>}
-          </div>
-        </div>
-        <Cobertura hay={hay} req={req} grande />
-      </header>
-
-      {db.personas.length > 0 && (
-        <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-2 border-b border-linea px-4 py-1.5 text-[11px] font-medium text-suave">
-          <span>Persona cuidada</span>
-          <span className="pl-1.5">Cuidadora</span>
-        </div>
-      )}
-
-      {grupos.map((g) => (
-        <div key={g.id}>
-          {g.titulo && (
-            <div className="border-b border-linea bg-fondo px-4 py-1.5 text-xs font-semibold tracking-wide text-suave uppercase">{g.titulo}</div>
-          )}
-          <ul className="divide-y divide-linea">
-            {g.filas.map((f, i) => (
-              <FilaPuesto key={f.a?.id ?? `${g.id}-${f.persona?.id}-${i}`} f={f} t={t} fecha={fecha} onModal={onModal} />
-            ))}
-          </ul>
-        </div>
+    <div className="group space-y-1 border-l border-linea p-1.5">
+      {items.map((a) => <ChipCuidadora key={a.id} a={a} onClick={() => onModal({ fecha, id: a.id })} />)}
+      {Array.from({ length: libres }, (_, i) => (
+        <button
+          key={i}
+          onClick={() => onModal({ fecha, turnoId: t.id, personaId: p.id })}
+          className="flex w-full items-center gap-1 rounded-md border border-dashed border-alerta-200 bg-alerta-50 px-2 py-1.5 text-xs font-medium text-alerta hover:bg-[#fbe9e7]"
+        >
+          <Plus size={13} /> Asignar
+        </button>
       ))}
-
-      <button
-        onClick={() => onModal({ fecha, turnoId: t.id })}
-        className="flex w-full items-center justify-center gap-1.5 border-t border-linea py-2.5 text-sm font-medium text-primario hover:bg-primario-50"
-      >
-        <Plus size={15} /> Asignar en este turno
-      </button>
-    </section>
+      {req === 0 && items.length === 0 && (
+        <button
+          onClick={() => onModal({ fecha, turnoId: t.id, personaId: p.id })}
+          className="flex w-full items-center rounded-md px-2 py-1.5 text-xs text-[#c4c9d1] hover:bg-fondo hover:text-suave"
+          title="Este turno no lo necesita. Toca para asignar igual."
+        >
+          —
+        </button>
+      )}
+    </div>
   );
 }
 
-function FilaPuesto({ f, t, fecha, onModal }: { f: Fila; t: Turno; fecha: string; onModal: (i: AsignarInicial) => void }) {
+function ChipCuidadora({ a, onClick }: { a: Asignacion; onClick: () => void }) {
   const { db } = useStore();
-  const c = f.a && db.cuidadoras.find((x) => x.id === f.a!.cuidadoraId);
-  const normal = horario(t, fecha);
-  const distinto = f.a && (f.a.inicio !== normal.inicio || f.a.fin !== normal.fin);
+  const c = db.cuidadoras.find((x) => x.id === a.cuidadoraId);
+  if (!c) return null;
   return (
-    <li className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-2 px-4 py-2">
-      <span className="truncate text-sm text-suave" title={f.persona?.nombre}>{f.persona?.nombre ?? '—'}</span>
-      {f.a && c ? (
-        <button
-          onClick={() => onModal({ fecha, id: f.a!.id })}
-          className="flex min-w-0 items-center gap-2 rounded-lg px-1.5 py-1 text-left hover:bg-fondo"
-        >
-          <Avatar c={c} size={26} />
-          <span className={cx('min-w-0 flex-1 truncate text-sm font-medium', f.a.estado === 'falto' && 'text-suave line-through')}>{c.nombre}</span>
-          {distinto && <span className="shrink-0 text-xs text-aviso">{fmtHora(f.a.inicio)}–{fmtHora(f.a.fin)}</span>}
-          <IconoEstado estado={f.a.estado} />
-        </button>
-      ) : (
-        <button
-          onClick={() => onModal({ fecha, turnoId: t.id, personaId: f.persona?.id })}
-          className="flex items-center gap-1.5 rounded-lg border border-dashed border-alerta-200 bg-alerta-50 px-2.5 py-1.5 text-sm font-medium text-alerta hover:bg-[#fbe9e7]"
-        >
-          <Plus size={14} /> Asignar cuidadora
-        </button>
-      )}
-    </li>
+    <button onClick={onClick} title={`${c.nombre} · ${a.inicio}–${a.fin}`} className="flex w-full min-w-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-left hover:bg-fondo">
+      <span className="hidden sm:block"><Avatar c={c} size={24} /></span>
+      <span className={cx('min-w-0 flex-1 truncate text-sm', a.estado === 'falto' && 'text-suave line-through')}>
+        <span className="sm:hidden">{primerNombre(c.nombre)}</span>
+        <span className="hidden sm:inline">{c.nombre}</span>
+      </span>
+      <IconoEstado estado={a.estado} />
+    </button>
   );
 }
 

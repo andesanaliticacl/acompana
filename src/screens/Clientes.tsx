@@ -8,9 +8,9 @@ import { PALETA } from '../lib/colores';
 import { Boton, Campo, Card, Contador, Modal, Titulo, TurnoIcono, cx, inputCls, primerNombre } from '../components/ui';
 
 /** Clientes = apoderados. Cada uno tiene a cargo una o más personas cuidadas. */
-export function Clientes() {
+export function Clientes({ param }: { param?: string }) {
   const { db, upsert } = useStore();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(param ?? '');
   const [editar, setEditar] = useState<Cliente | null>(null);
   const [verInactivos, setVerInactivos] = useState(false);
   const h = hoy();
@@ -45,7 +45,7 @@ export function Clientes() {
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <div className="relative min-w-0 flex-1">
           <Search size={18} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-suave" />
-          <input className={cx(inputCls, 'pl-10')} placeholder="Buscar cliente o persona cuidada" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className={cx(inputCls, 'pl-10')} placeholder="Buscar cliente o residente" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
         {inactivos > 0 && (
           <label className="flex items-center gap-2 text-sm text-suave">
@@ -77,7 +77,7 @@ export function Clientes() {
                 )}
               </div>
 
-              <div className="mt-3 text-xs text-suave">A cargo de</div>
+              <div className="mt-3 text-xs text-suave">Residente{personasDe(c).length === 1 ? "" : "s"}</div>
               <ul className="mt-1 space-y-1.5">
                 {personasDe(c).map((p) => {
                   const piso = db.pisos.find((x) => x.id === p.pisoId);
@@ -101,7 +101,7 @@ export function Clientes() {
                     </li>
                   );
                 })}
-                {personasDe(c).length === 0 && <li className="text-sm text-suave">Sin personas registradas</li>}
+                {personasDe(c).length === 0 && <li className="text-sm text-suave">Sin residentes registrados</li>}
               </ul>
 
               <div className="mt-auto flex items-center justify-between gap-2 pt-3">
@@ -166,9 +166,9 @@ function FormCliente({ inicial, onClose }: { inicial: Cliente; onClose: () => vo
 
         <div>
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium">Personas a su cargo</span>
+            <span className="text-sm font-medium">Residentes a su cargo</span>
             <Boton chico variante="suave" onClick={agregar}>
-              <Plus size={14} /> Agregar persona
+              <Plus size={14} /> Agregar residente
             </Boton>
           </div>
           <div className="space-y-3">
@@ -190,7 +190,7 @@ function FormCliente({ inicial, onClose }: { inicial: Cliente; onClose: () => vo
                   <button
                     onClick={() => setPersonas((xs) => xs.filter((x) => x.id !== p.id))}
                     className="mt-6 self-start rounded-lg p-2.5 text-alerta hover:bg-alerta-50"
-                    aria-label="Quitar persona"
+                    aria-label="Quitar residente"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -207,7 +207,7 @@ function FormCliente({ inicial, onClose }: { inicial: Cliente; onClose: () => vo
                 </div>
               </div>
             ))}
-            {personas.length === 0 && <p className="text-sm text-suave">Agrega a la persona que se va a cuidar.</p>}
+            {personas.length === 0 && <p className="text-sm text-suave">Agrega al residente que se va a cuidar.</p>}
           </div>
         </div>
 

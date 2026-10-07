@@ -117,7 +117,7 @@ export interface Cliente {
   activo: boolean;
 }
 
-/** Persona cuidada (adulto mayor) a cargo de un cliente. `requeridas[turnoId]` = cuidadoras que necesita en ese turno. */
+/** Residente (adulto mayor) a cargo de un cliente. `requeridas[turnoId]` = cuidadoras que necesita en ese turno. */
 export interface Persona {
   id: string;
   clienteId?: string;

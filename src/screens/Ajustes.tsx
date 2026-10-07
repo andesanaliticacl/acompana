@@ -62,7 +62,7 @@ export function Ajustes() {
                 {db.personas.length ? (
                   <Campo label="Cuidadoras por turno">
                     <div className="py-2.5 text-sm text-suave">
-                      <b className="text-tinta">{requeridasTurno(db, t)}</b> en total (según personas cuidadas)
+                      <b className="text-tinta">{requeridasTurno(db, t)}</b> en total (según residentes)
                     </div>
                   </Campo>
                 ) : (
@@ -136,7 +136,7 @@ export function Ajustes() {
         <div className="flex items-center justify-between border-b border-linea px-4 py-3">
           <div>
             <h2 className="font-semibold">Pisos</h2>
-            <p className="text-sm text-suave">Los pisos ordenan a las personas cuidadas. Cuántas cuidadoras necesita cada una se define en Clientes.</p>
+            <p className="text-sm text-suave">Los pisos ordenan a los residentes. Cuántas cuidadoras necesita cada uno se define en Clientes.</p>
           </div>
           <Boton chico variante="suave" onClick={() => upsert('pisos', { id: uid(), nombre: `Piso ${db.pisos.length + 1}` })}>
             <Plus size={16} /> Agregar piso
@@ -149,13 +149,13 @@ export function Ajustes() {
             return (
               <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
                 <input className={cx(inputCls, '!w-48')} value={p.nombre} onChange={(e) => upsert('pisos', { ...p, nombre: e.target.value })} aria-label="Nombre del piso" />
-                <span className="text-sm text-suave">{n} persona{n === 1 ? "" : "s"}</span>
+                <span className="text-sm text-suave">{n} residente{n === 1 ? "" : "s"}</span>
                 <Boton
                   chico
                   variante="peligro"
                   className="ml-auto"
                   onClick={() => {
-                    if (confirm(n ? `${p.nombre} tiene ${n} personas; quedarán "Sin piso". ¿Borrar igual?` : `¿Borrar ${p.nombre}?`)) remove('pisos', p.id);
+                    if (confirm(n ? `${p.nombre} tiene ${n} residentes; quedarán "Sin piso". ¿Borrar igual?` : `¿Borrar ${p.nombre}?`)) remove('pisos', p.id);
                   }}
                 >
                   <Trash2 size={16} />
