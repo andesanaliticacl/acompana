@@ -9,9 +9,9 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { DB } from '../lib/types';
 import { crearSeed, dbVacia } from '../lib/seed';
 
-const KEY = 'acompana-demo-v2';
+const KEY = 'acompana-demo-v3';
 
-type Coleccion = 'cuidadoras' | 'turnos' | 'asignaciones' | 'pagos' | 'movimientos';
+type Coleccion = 'cuidadoras' | 'turnos' | 'pisos' | 'asignaciones' | 'pagos' | 'movimientos';
 type Item<K extends Coleccion> = DB[K][number];
 
 interface Store {
@@ -28,7 +28,10 @@ const Ctx = createContext<Store | null>(null);
 function cargar(): DB {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw) as DB;
+    if (raw) {
+      const db = JSON.parse(raw) as DB;
+      return { ...db, pisos: db.pisos ?? [] };
+    }
   } catch {
     /* sin almacenamiento: seguimos con datos de ejemplo */
   }

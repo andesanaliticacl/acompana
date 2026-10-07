@@ -5,7 +5,21 @@ import { DIAS_CORTOS, duracion, fmtHoras, uid } from '../lib/fechas';
 import { COLORES, PALETA } from '../lib/colores';
 import { Boton, Campo, Card, OPCIONES_ICONO, Titulo, TurnoIcono, cx, inputCls } from '../components/ui';
 
-const DIAS_LARGOS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+function Contador({ valor, min, onChange }: { valor: number; min: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex items-center overflow-hidden rounded-lg border border-[#d1d5db] bg-white shadow-sm">
+      <button className="px-3 py-2.5 hover:bg-fondo disabled:opacity-30" disabled={valor <= min} onClick={() => onChange(Math.max(min, valor - 1))} aria-label="Menos">
+        <Minus size={15} />
+      </button>
+      <span className="w-9 text-center font-semibold tabular-nums">{valor}</span>
+      <button className="px-3 py-2.5 hover:bg-fondo" onClick={() => onChange(valor + 1)} aria-label="Más">
+        <Plus size={15} />
+      </button>
+    </div>
+  );
+}
+
+const DIAS_LARGOS =['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 export function Ajustes() {
   const { db, upsert, remove, setAjustes, reiniciar } = useStore();
@@ -57,17 +71,17 @@ export function Ajustes() {
               </div>
 
               <div className="flex flex-wrap items-end gap-4">
-                <Campo label="Cuidadoras por turno">
-                  <div className="flex items-center overflow-hidden rounded-lg border border-[#d1d5db] bg-white shadow-sm">
-                    <button className="px-3 py-2.5 hover:bg-fondo" onClick={() => editarTurno(t, { requeridas: Math.max(1, (t.requeridas ?? 1) - 1) })} aria-label="Menos">
-                      <Minus size={15} />
-                    </button>
-                    <span className="w-10 text-center font-semibold tabular-nums">{t.requeridas ?? 1}</span>
-                    <button className="px-3 py-2.5 hover:bg-fondo" onClick={() => editarTurno(t, { requeridas: (t.requeridas ?? 1) + 1 })} aria-label="Más">
-                      <Plus size={15} />
-                    </button>
-                  </div>
-                </Campo>
+                {db.pisos.length ? (
+                  <Campo label="Cuidadoras por turno">
+                    <div className="py-2.5 text-sm text-suave">
+                      <b className="text-tinta">{db.pisos.reduce((s, p) => s + (p.requeridas[t.id] ?? 0), 0)}</b> en total (según pisos)
+                    </div>
+                  </Campo>
+                ) : (
+                  <Campo label="Cuidadoras por turno">
+                    <Contador valor={t.requeridas ?? 1} min={1} onChange={(v) => editarTurno(t, { requeridas: v })} />
+                  </Campo>
+                )}
 
                 <Campo label="Horario especial">
                   <div className="flex flex-wrap items-center gap-2">
@@ -128,6 +142,59 @@ export function Ajustes() {
         <p className="border-t border-linea px-4 py-2.5 text-xs text-suave">
           Días: {DIAS_CORTOS.join(' · ')}. Los cambios de horario aplican a los turnos que asignes desde ahora.
         </p>
+      </Card>
+
+      <Card className="mb-4 !p-0">
+        <div className="flex items-center justify-between border-b border-linea px-4 py-3">
+          <div>
+            <h2 className="font-semibold">Pisos</h2>
+            <p className="text-sm text-suave">Cuántas cuidadoras necesita cada piso en cada turno. El calendario muestra los cupos libres.</p>
+          </div>
+          <Boton
+            chico
+            variante="suave"
+            onClick={() =>
+              upsert('pisos', { id: uid(), nombre: `Piso ${db.pisos.length + 1}`, requeridas: Object.fromEntries(db.turnos.map((t) => [t.id, 1])) })
+            }
+          >
+            <Plus size={16} /> Agregar piso
+          </Boton>
+        </div>
+        {db.pisos.length === 0 && <p className="px-4 py-4 text-sm text-suave">Sin pisos: se usa el número de cuidadoras de cada turno.</p>}
+        <div className="divide-y divide-linea">
+          {db.pisos.map((p) => (
+            <div key={p.id} className="flex flex-wrap items-end gap-3 px-4 py-3">
+              <Campo label="Nombre">
+                <input className={cx(inputCls, '!w-40')} value={p.nombre} onChange={(e) => upsert('pisos', { ...p, nombre: e.target.value })} />
+              </Campo>
+              {db.turnos.map((t) => (
+                <Campo key={t.id} label={`Turno ${t.nombre.toLowerCase()}`}>
+                  <Contador
+                    valor={p.requeridas[t.id] ?? 0}
+                    min={0}
+                    onChange={(v) => upsert('pisos', { ...p, requeridas: { ...p.requeridas, [t.id]: v } })}
+                  />
+                </Campo>
+              ))}
+              <Boton
+                chico
+                variante="peligro"
+                className="mb-1 ml-auto"
+                onClick={() => {
+                  const n = db.asignaciones.filter((a) => a.pisoId === p.id).length;
+                  if (confirm(n ? `${p.nombre} tiene ${n} asignaciones; quedarán como "Sin piso". ¿Borrar igual?` : `¿Borrar ${p.nombre}?`)) remove('pisos', p.id);
+                }}
+              >
+                <Trash2 size={16} />
+              </Boton>
+            </div>
+          ))}
+        </div>
+        {db.pisos.length > 0 && (
+          <p className="border-t border-linea px-4 py-2.5 text-xs text-suave">
+            Total por turno: {db.turnos.map((t) => `${t.nombre} ${db.pisos.reduce((s, p) => s + (p.requeridas[t.id] ?? 0), 0)}`).join(' · ')}
+          </p>
+        )}
       </Card>
 
       <Card>

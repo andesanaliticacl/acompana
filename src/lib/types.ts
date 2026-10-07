@@ -35,6 +35,7 @@ export interface Asignacion {
   id: string;
   fecha: string; // día en que empieza el turno
   turnoId: string;
+  pisoId?: string; // piso o sector donde trabaja ese turno
   cuidadoraId: string;
   inicio: string;
   fin: string;
@@ -62,9 +63,17 @@ export interface Movimiento {
   medio: 'efectivo' | 'transferencia';
 }
 
+/** Piso o sector de la residencia. `requeridas[turnoId]` = cuidadoras que necesita en ese turno. */
+export interface Piso {
+  id: string;
+  nombre: string;
+  requeridas: Record<string, number>;
+}
+
 export interface DB {
   cuidadoras: Cuidadora[];
   turnos: Turno[];
+  pisos: Piso[];
   asignaciones: Asignacion[];
   pagos: Pago[];
   movimientos: Movimiento[];

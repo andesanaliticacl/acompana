@@ -1,4 +1,4 @@
-import type { Asignacion, Cuidadora, DB, Movimiento, Turno } from './types';
+import type { Asignacion, Cuidadora, DB, Movimiento, Piso, Turno } from './types';
 import { hoy, lunesDe, sumarDias, uid } from './fechas';
 import { horario, resumenSemana } from './calculos';
 
@@ -12,6 +12,14 @@ export const TURNOS_BASE: Turno[] = [
     excepcion: { dia: 5, inicio: '20:00', fin: '09:00' }, // la noche del sábado entrega a las 9 del domingo
   },
 ];
+
+export const PISOS_BASE: Piso[] = [
+  { id: 'p1', nombre: 'Piso 1', requeridas: { dia: 2, noche: 1 } },
+  { id: 'p2', nombre: 'Piso 2', requeridas: { dia: 1, noche: 1 } },
+  { id: 'p3', nombre: 'Piso 3', requeridas: { dia: 1, noche: 1 } },
+];
+// En qué piso queda cada puesto del plan (por orden)
+const PISO_PUESTO: Record<string, string[]> = { dia: ['p1', 'p1', 'p2', 'p3', 'p1'], noche: ['p1', 'p2', 'p3'] };
 
 type Base = Omit<Cuidadora, 'id' | 'activa' | 'notas' | 'telefono'> & { notas?: string };
 const c = (n: number, b: Base): Cuidadora => ({
@@ -66,14 +74,14 @@ export function crearSeed(): DB {
           } else if (fecha === h && t.id === 'dia' && horaActual >= 9) {
             estado = cid === 'c3' ? 'atraso' : 'asistio';
           }
-          asignaciones.push({ id: uid(), fecha, turnoId: t.id, cuidadoraId: cid, ...horario(t, fecha), estado });
+          asignaciones.push({ id: uid(), fecha, turnoId: t.id, pisoId: PISO_PUESTO[t.id][i], cuidadoraId: cid, ...horario(t, fecha), estado });
         });
       }
     }
   }
   // Ejemplo de horas sueltas: reemplazo corto de 4 horas
   asignaciones.push({
-    id: uid(), fecha: sumarDias(lunes, -5), turnoId: 'dia', cuidadoraId: 'c12', inicio: '16:00', fin: '20:00',
+    id: uid(), fecha: sumarDias(lunes, -5), turnoId: 'dia', pisoId: 'p2', cuidadoraId: 'c12', inicio: '16:00', fin: '20:00',
     estado: 'asistio', nota: 'Reemplazo de Patricia (horas sueltas)',
   });
 
@@ -97,7 +105,7 @@ export function crearSeed(): DB {
     if (semana === -2) add(2, { tipo: 'gasto', concepto: 'Uniformes', monto: 96000, medio: 'transferencia' });
   }
 
-  const db: DB = { cuidadoras: CUIDADORAS, turnos: TURNOS_BASE, asignaciones, pagos: [], movimientos, ajustes: { nombreDuena: '' } };
+  const db: DB = { cuidadoras: CUIDADORAS, turnos: TURNOS_BASE, pisos: PISOS_BASE, asignaciones, pagos: [], movimientos, ajustes: { nombreDuena: '' } };
 
   // Semanas anteriores ya pagadas el domingo
   for (const semana of [-6, -5, -4, -3, -2, -1]) {
@@ -113,5 +121,5 @@ export function crearSeed(): DB {
 }
 
 export const dbVacia = (): DB => ({
-  cuidadoras: [], turnos: TURNOS_BASE, asignaciones: [], pagos: [], movimientos: [], ajustes: { nombreDuena: '' },
+  cuidadoras: [], turnos: TURNOS_BASE, pisos: PISOS_BASE, asignaciones: [], pagos: [], movimientos: [], ajustes: { nombreDuena: '' },
 });

@@ -33,7 +33,17 @@ create table turnos (
   emoji text,
   inicio time not null,
   fin time not null,                           -- si fin <= inicio cruza la medianoche
-  color text not null default 'cielo',
+  color text not null default 'azul',
+  requeridas smallint not null default 1,      -- se usa si no hay pisos
+  excepcion jsonb,                             -- { "dia": 6, "inicio": "09:00", "fin": "20:00" }
+  orden smallint not null default 0
+);
+
+create table pisos (
+  id uuid primary key default gen_random_uuid(),
+  agencia_id uuid not null references agencias(id) on delete cascade,
+  nombre text not null,
+  requeridas jsonb not null default '{}',   -- { "<turno_id>": cuidadoras necesarias }
   orden smallint not null default 0
 );
 
@@ -44,6 +54,7 @@ create table asignaciones (
   agencia_id uuid not null references agencias(id) on delete cascade,
   fecha date not null,
   turno_id uuid not null references turnos(id),
+  piso_id uuid references pisos(id) on delete set null,
   cuidadora_id uuid not null references cuidadoras(id),
   inicio time not null,
   fin time not null,
@@ -80,6 +91,7 @@ create index on movimientos (agencia_id, fecha);
 alter table agencias enable row level security;
 alter table cuidadoras enable row level security;
 alter table turnos enable row level security;
+alter table pisos enable row level security;
 alter table asignaciones enable row level security;
 alter table pagos enable row level security;
 alter table movimientos enable row level security;
@@ -90,6 +102,9 @@ create policy "por agencia" on cuidadoras for all
   using (agencia_id in (select id from agencias where owner_id = auth.uid()))
   with check (agencia_id in (select id from agencias where owner_id = auth.uid()));
 create policy "por agencia" on turnos for all
+  using (agencia_id in (select id from agencias where owner_id = auth.uid()))
+  with check (agencia_id in (select id from agencias where owner_id = auth.uid()));
+create policy "por agencia" on pisos for all
   using (agencia_id in (select id from agencias where owner_id = auth.uid()))
   with check (agencia_id in (select id from agencias where owner_id = auth.uid()));
 create policy "por agencia" on asignaciones for all

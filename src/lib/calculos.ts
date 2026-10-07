@@ -1,4 +1,4 @@
-import type { Asignacion, DB, Turno } from './types';
+import type { Asignacion, DB, Piso, Turno } from './types';
 import { aMin, duracion, hoy, parse, sumarDias } from './fechas';
 
 export const horasDe = (a: Pick<Asignacion, 'inicio' | 'fin'>) => duracion(a.inicio, a.fin);
@@ -78,19 +78,36 @@ export function horario(t: Turno, fecha: string) {
   return ex && ex.dia === diaSemana(fecha) ? { inicio: ex.inicio, fin: ex.fin } : { inicio: t.inicio, fin: t.fin };
 }
 
-/** Cuántas cuidadoras cubren un turno en una fecha (las que faltaron no cuentan). */
-export const cubiertas = (db: DB, fecha: string, turnoId: string) =>
-  db.asignaciones.filter((a) => a.fecha === fecha && a.turnoId === turnoId && a.estado !== 'falto').length;
+/** Cuántas cuidadoras cubren un turno (y opcionalmente un piso) en una fecha. Las que faltaron no cuentan. */
+export const cubiertas = (db: DB, fecha: string, turnoId: string, pisoId?: string) =>
+  db.asignaciones.filter(
+    (a) => a.fecha === fecha && a.turnoId === turnoId && a.estado !== 'falto' && (pisoId === undefined || a.pisoId === pisoId),
+  ).length;
 
-/** Turnos a los que les falta gente a partir de una fecha. */
+/** Cuidadoras que necesita un piso en un turno. */
+export const requeridasPiso = (p: Piso, turnoId: string) => p.requeridas[turnoId] ?? 0;
+
+/** Cuidadoras que necesita un turno en total (suma de pisos, o el número del turno si no hay pisos). */
+export const requeridasTurno = (db: DB, t: Turno) =>
+  db.pisos.length ? db.pisos.reduce((s, p) => s + requeridasPiso(p, t.id), 0) : Math.max(1, t.requeridas ?? 1);
+
+/** Turnos a los que les falta gente a partir de una fecha (con pisos, se mira piso por piso). */
 export function huecos(db: DB, desde: string, dias: number) {
-  const out: { fecha: string; turno: Turno; hay: number; faltan: number }[] = [];
+  const out: { fecha: string; turno: Turno; hay: number; req: number; faltan: number; pisos: string[] }[] = [];
   for (let i = 0; i < dias; i++) {
     const fecha = sumarDias(desde, i);
     for (const t of db.turnos) {
       const hay = cubiertas(db, fecha, t.id);
-      const req = Math.max(1, t.requeridas ?? 1);
-      if (hay < req) out.push({ fecha, turno: t, hay, faltan: req - hay });
+      const req = requeridasTurno(db, t);
+      let faltan = 0;
+      const pisos: string[] = [];
+      if (db.pisos.length) {
+        for (const p of db.pisos) {
+          const f = Math.max(0, requeridasPiso(p, t.id) - cubiertas(db, fecha, t.id, p.id));
+          if (f) { faltan += f; pisos.push(p.nombre); }
+        }
+      } else faltan = Math.max(0, req - hay);
+      if (faltan > 0) out.push({ fecha, turno: t, hay, req, faltan, pisos });
     }
   }
   return out;
