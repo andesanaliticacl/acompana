@@ -43,8 +43,21 @@ create table pisos (
   id uuid primary key default gen_random_uuid(),
   agencia_id uuid not null references agencias(id) on delete cascade,
   nombre text not null,
-  requeridas jsonb not null default '{}',   -- { "<turno_id>": cuidadoras necesarias }
   orden smallint not null default 0
+);
+
+create table clientes (
+  id uuid primary key default gen_random_uuid(),
+  agencia_id uuid not null references agencias(id) on delete cascade,
+  piso_id uuid references pisos(id) on delete set null,
+  nombre text not null,
+  fecha_nacimiento date,
+  contacto text,                               -- familiar responsable
+  telefono text,
+  cuidados text,
+  requeridas jsonb not null default '{}',     -- { "<turno_id>": cuidadoras necesarias }
+  cobro_semanal int not null default 0,
+  activo boolean not null default true
 );
 
 create type estado_turno as enum ('programado', 'asistio', 'atraso', 'falto');
@@ -54,7 +67,8 @@ create table asignaciones (
   agencia_id uuid not null references agencias(id) on delete cascade,
   fecha date not null,
   turno_id uuid not null references turnos(id),
-  piso_id uuid references pisos(id) on delete set null,
+  cliente_id uuid references clientes(id) on delete set null,
+  piso_id uuid references pisos(id) on delete set null,          -- solo si no hay cliente
   cuidadora_id uuid not null references cuidadoras(id),
   inicio time not null,
   fin time not null,
@@ -92,6 +106,7 @@ alter table agencias enable row level security;
 alter table cuidadoras enable row level security;
 alter table turnos enable row level security;
 alter table pisos enable row level security;
+alter table clientes enable row level security;
 alter table asignaciones enable row level security;
 alter table pagos enable row level security;
 alter table movimientos enable row level security;
@@ -105,6 +120,9 @@ create policy "por agencia" on turnos for all
   using (agencia_id in (select id from agencias where owner_id = auth.uid()))
   with check (agencia_id in (select id from agencias where owner_id = auth.uid()));
 create policy "por agencia" on pisos for all
+  using (agencia_id in (select id from agencias where owner_id = auth.uid()))
+  with check (agencia_id in (select id from agencias where owner_id = auth.uid()));
+create policy "por agencia" on clientes for all
   using (agencia_id in (select id from agencias where owner_id = auth.uid()))
   with check (agencia_id in (select id from agencias where owner_id = auth.uid()));
 create policy "por agencia" on asignaciones for all

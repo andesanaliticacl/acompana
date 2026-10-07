@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { AlertTriangle, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Copy, Download, Plus, Users, X } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { AlertTriangle, Building2, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Copy, Download, HeartPulse, Plus, Users, X } from 'lucide-react';
 import { useStore } from '../state/store';
-import type { Asignacion, Turno } from '../lib/types';
+import type { Asignacion, Cliente, Turno } from '../lib/types';
 import { ESTADOS } from '../lib/types';
 import { DIAS_CORTOS, diasSemana, fmtCorto, fmtDia, fmtHora, fmtHoras, fmtLargo, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
-import { asignacionesSemana, descargarCSV, horario, horasDe, huecos, requeridasPiso, requeridasTurno, resumenSemana } from '../lib/calculos';
+import { asignacionesSemana, clienteDe, clientesActivos, descargarCSV, horario, horasDe, huecos, pisoDe, requeridasCliente, requeridasTurno, resumenSemana } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
 import { Avatar, Boton, Segmentado, Titulo, TurnoIcono, cx } from '../components/ui';
 import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
@@ -50,10 +50,11 @@ export function Semana() {
   };
 
   const exportar = () => {
-    const filas: (string | number)[][] = [['Fecha', 'Turno', 'Piso', 'Cuidadora', 'Desde', 'Hasta', 'Horas', 'Estado', 'Nota']];
+    const filas: (string | number)[][] = [['Fecha', 'Turno', 'Piso', 'Cliente', 'Cuidadora', 'Desde', 'Hasta', 'Horas', 'Estado', 'Nota']];
     for (const a of [...delaSemana].sort((x, y) => (x.fecha + x.inicio).localeCompare(y.fecha + y.inicio))) {
       filas.push([
-        a.fecha, db.turnos.find((t) => t.id === a.turnoId)?.nombre ?? '', db.pisos.find((p) => p.id === a.pisoId)?.nombre ?? '',
+        a.fecha, db.turnos.find((t) => t.id === a.turnoId)?.nombre ?? '',
+        db.pisos.find((p) => p.id === pisoDe(db, a))?.nombre ?? '', clienteDe(db, a)?.nombre ?? '',
         db.cuidadoras.find((c) => c.id === a.cuidadoraId)?.nombre ?? '',
         a.inicio, a.fin, String(horasDe(a)).replace('.', ','), ESTADOS[a.estado].label, a.nota ?? '',
       ]);
@@ -148,17 +149,44 @@ export function Semana() {
   );
 }
 
-/* ───────────── Vista día a día: Día y Noche, piso por piso ───────────── */
+/* ───────────── Vista día a día: Día y Noche, por piso o por cliente ───────────── */
+
+type Agrupar = 'piso' | 'cliente';
+
+const leerAgrupar = (): Agrupar => {
+  try {
+    return localStorage.getItem('acompana-agrupar') === 'cliente' ? 'cliente' : 'piso';
+  } catch {
+    return 'piso';
+  }
+};
 
 function VistaDia({ fecha, onModal }: { fecha: string; onModal: (i: AsignarInicial) => void }) {
   const { db } = useStore();
+  const [agrupar, setAgruparState] = useState<Agrupar>(leerAgrupar);
+  const setAgrupar = (v: Agrupar) => {
+    setAgruparState(v);
+    try { localStorage.setItem('acompana-agrupar', v); } catch { /* ignorar */ }
+  };
   const delDia = db.asignaciones.filter((a) => a.fecha === fecha);
   return (
     <div>
-      <h2 className="mb-3 text-lg font-semibold">{fmtLargo(fecha)}</h2>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">{fmtLargo(fecha)}</h2>
+        {db.clientes.length > 0 && (
+          <Segmentado<Agrupar>
+            valor={agrupar}
+            onChange={setAgrupar}
+            opciones={[
+              { id: 'piso', label: <><Building2 size={15} /> Por piso</> },
+              { id: 'cliente', label: <><HeartPulse size={15} /> Por cliente</> },
+            ]}
+          />
+        )}
+      </div>
       <div className="grid gap-4 lg:grid-cols-2">
         {db.turnos.map((t) => (
-          <ColumnaTurno key={t.id} t={t} fecha={fecha} lista={delDia.filter((a) => a.turnoId === t.id)} onModal={onModal} />
+          <ColumnaTurno key={t.id} t={t} fecha={fecha} agrupar={agrupar} lista={delDia.filter((a) => a.turnoId === t.id)} onModal={onModal} />
         ))}
       </div>
       <Leyenda />
@@ -166,21 +194,45 @@ function VistaDia({ fecha, onModal }: { fecha: string; onModal: (i: AsignarInici
   );
 }
 
-function ColumnaTurno({ t, fecha, lista, onModal }: { t: Turno; fecha: string; lista: Asignacion[]; onModal: (i: AsignarInicial) => void }) {
+function ColumnaTurno({ t, fecha, agrupar, lista, onModal }: { t: Turno; fecha: string; agrupar: Agrupar; lista: Asignacion[]; onModal: (i: AsignarInicial) => void }) {
   const { db } = useStore();
   const col = PALETA[t.color];
   const hor = horario(t, fecha);
   const especial = hor.inicio !== t.inicio || hor.fin !== t.fin;
   const hay = lista.filter((a) => a.estado !== 'falto').length;
   const req = requeridasTurno(db, t);
+  const clientes = clientesActivos(db).filter((k) => requeridasCliente(k, t.id) > 0 || lista.some((a) => a.clienteId === k.id));
+  const sinCliente = lista.filter((a) => !clientes.some((k) => k.id === a.clienteId));
 
-  // Grupos: un bloque por piso (o uno solo si no hay pisos) + las que no tienen piso
-  const grupos = db.pisos.length
-    ? [
-        ...db.pisos.map((p) => ({ id: p.id, nombre: p.nombre, req: requeridasPiso(p, t.id), items: lista.filter((a) => a.pisoId === p.id) })),
-        { id: '__sin', nombre: 'Sin piso', req: 0, items: lista.filter((a) => !db.pisos.some((p) => p.id === a.pisoId)) },
-      ].filter((g) => g.req > 0 || g.items.length > 0)
-    : [{ id: '__todos', nombre: 'Cuidadoras', req, items: lista }];
+  const bloque = (k: Cliente, conPiso: boolean) => (
+    <BloqueCliente key={k.id} k={k} t={t} fecha={fecha} conPiso={conPiso} items={lista.filter((a) => a.clienteId === k.id)} onModal={onModal} />
+  );
+
+  let cuerpo: ReactNode;
+  if (!db.clientes.length) {
+    cuerpo = <Grupo titulo="Cuidadoras" req={req} items={lista} t={t} fecha={fecha} onModal={onModal} />;
+  } else if (agrupar === 'piso') {
+    const grupos = [...db.pisos, { id: '', nombre: 'Sin piso' }]
+      .map((p) => ({ p, cs: clientes.filter((k) => (k.pisoId ?? '') === p.id) }))
+      .filter((g) => g.cs.length);
+    cuerpo = grupos.map(({ p, cs }) => {
+      const reqP = cs.reduce((s, k) => s + requeridasCliente(k, t.id), 0);
+      const hayP = lista.filter((a) => a.estado !== 'falto' && cs.some((k) => k.id === a.clienteId)).length;
+      return (
+        <div key={p.id || 'sin'}>
+          <div className="flex items-center justify-between border-b border-linea bg-fondo px-4 py-1.5">
+            <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-suave uppercase">
+              <Building2 size={13} /> {p.nombre}
+            </span>
+            <Cobertura hay={hayP} req={reqP} />
+          </div>
+          <div className="divide-y divide-linea">{cs.map((k) => bloque(k, false))}</div>
+        </div>
+      );
+    });
+  } else {
+    cuerpo = <div className="divide-y divide-linea">{[...clientes].sort((a, b) => a.nombre.localeCompare(b.nombre)).map((k) => bloque(k, true))}</div>;
+  }
 
   return (
     <section className="overflow-hidden rounded-xl border border-linea bg-white shadow-[0_1px_2px_rgba(16,24,40,.04)]">
@@ -197,47 +249,76 @@ function ColumnaTurno({ t, fecha, lista, onModal }: { t: Turno; fecha: string; l
         </div>
         <Cobertura hay={hay} req={req} grande />
       </header>
-
-      <div className="divide-y divide-linea">
-        {grupos.map((g) => {
-          const activos = g.items.filter((a) => a.estado !== 'falto').length;
-          const libres = Math.max(0, g.req - activos);
-          const pisoId = g.id.startsWith('__') ? undefined : g.id;
-          return (
-            <div key={g.id} className="px-4 py-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-semibold">{g.nombre}</span>
-                {g.req > 0 && <Cobertura hay={activos} req={g.req} />}
-              </div>
-              <ul className="space-y-1.5">
-                {g.items.map((a) => <FilaPersona key={a.id} a={a} t={t} onClick={() => onModal({ fecha, id: a.id })} />)}
-                {Array.from({ length: libres }, (_, i) => (
-                  <li key={`libre${i}`}>
-                    <button
-                      onClick={() => onModal({ fecha, turnoId: t.id, pisoId })}
-                      className="flex w-full items-center gap-3 rounded-lg border border-dashed border-alerta-200 bg-alerta-50 px-3 py-2 text-left text-sm font-medium text-alerta transition hover:bg-[#fbe9e7]"
-                    >
-                      <span className="grid size-8 place-items-center rounded-full border border-dashed border-alerta-200 bg-white">
-                        <Plus size={15} />
-                      </span>
-                      Falta asignar cuidadora
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {libres === 0 && (
-                <button
-                  onClick={() => onModal({ fecha, turnoId: t.id, pisoId })}
-                  className="mt-1.5 flex items-center gap-1 text-xs font-medium text-suave hover:text-primario"
-                >
-                  <Plus size={13} /> Agregar otra
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {cuerpo}
+      {db.clientes.length > 0 && sinCliente.length > 0 && (
+        <div className="border-t border-linea">
+          <Grupo titulo="Sin cliente asignado" req={0} items={sinCliente} t={t} fecha={fecha} onModal={onModal} />
+        </div>
+      )}
     </section>
+  );
+}
+
+/** Un cliente dentro de un turno: sus cuidadoras y los cupos libres. */
+function BloqueCliente({ k, t, fecha, conPiso, items, onModal }: { k: Cliente; t: Turno; fecha: string; conPiso: boolean; items: Asignacion[]; onModal: (i: AsignarInicial) => void }) {
+  const { db } = useStore();
+  const piso = db.pisos.find((p) => p.id === k.pisoId);
+  return (
+    <Grupo
+      titulo={<>{k.nombre}{conPiso && piso && <span className="ml-2 rounded bg-fondo px-1.5 py-0.5 text-[11px] font-medium text-suave">{piso.nombre}</span>}</>}
+      subtitulo={k.cuidados}
+      req={requeridasCliente(k, t.id)}
+      items={items}
+      t={t}
+      fecha={fecha}
+      onModal={onModal}
+      clienteId={k.id}
+    />
+  );
+}
+
+function Grupo({
+  titulo, subtitulo, req, items, t, fecha, onModal, clienteId,
+}: {
+  titulo: ReactNode; subtitulo?: string; req: number; items: Asignacion[]; t: Turno; fecha: string;
+  onModal: (i: AsignarInicial) => void; clienteId?: string;
+}) {
+  const activos = items.filter((a) => a.estado !== 'falto').length;
+  const libres = Math.max(0, req - activos);
+  return (
+    <div className="px-4 py-3">
+      <div className="mb-2 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold">{titulo}</div>
+          {subtitulo && <div className="truncate text-xs text-suave" title={subtitulo}>{subtitulo}</div>}
+        </div>
+        {req > 0 && <Cobertura hay={activos} req={req} />}
+      </div>
+      <ul className="space-y-1.5">
+        {items.map((a) => <FilaPersona key={a.id} a={a} t={t} onClick={() => onModal({ fecha, id: a.id })} />)}
+        {Array.from({ length: libres }, (_, i) => (
+          <li key={`libre${i}`}>
+            <button
+              onClick={() => onModal({ fecha, turnoId: t.id, clienteId })}
+              className="flex w-full items-center gap-3 rounded-lg border border-dashed border-alerta-200 bg-alerta-50 px-3 py-2 text-left text-sm font-medium text-alerta transition hover:bg-[#fbe9e7]"
+            >
+              <span className="grid size-8 place-items-center rounded-full border border-dashed border-alerta-200 bg-white">
+                <Plus size={15} />
+              </span>
+              Falta asignar cuidadora
+            </button>
+          </li>
+        ))}
+      </ul>
+      {libres === 0 && (
+        <button
+          onClick={() => onModal({ fecha, turnoId: t.id, clienteId })}
+          className="mt-1.5 flex items-center gap-1 text-xs font-medium text-suave hover:text-primario"
+        >
+          <Plus size={13} /> Agregar otra
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -338,7 +419,9 @@ function VistaCuidadoras({ dias, lunes, delaSemana, onModal }: { dias: string[];
                   {dias.map((d) => {
                     const a = delaSemana.find((x) => x.fecha === d && x.cuidadoraId === c.id);
                     const t = a && db.turnos.find((x) => x.id === a.turnoId);
-                    const p = a && db.pisos.find((x) => x.id === a.pisoId);
+                    const k = a && clienteDe(db, a);
+                    const pi = a && db.pisos.find((x) => x.id === pisoDe(db, a));
+                    const p = k || pi ? { nombre: [k?.nombre.split(' ')[0], pi?.nombre.replace('Piso ', 'P')].filter(Boolean).join(' · ') } : undefined;
                     return (
                       <td key={d} className={cx('border-b border-l border-linea p-1 text-center', d === h && 'bg-primario-50/50')}>
                         {a && t ? (

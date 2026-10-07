@@ -4,7 +4,7 @@ import { useStore } from '../state/store';
 import type { Asignacion, Estado } from '../lib/types';
 import { ESTADOS } from '../lib/types';
 import { clp, diasEntre, fmtDia, fmtHora, fmtHoras, fmtLargo, hoy, lunesDe, sumarDias } from '../lib/fechas';
-import { horario, horasDe, huecos, requeridasTurno, resumenSemana } from '../lib/calculos';
+import { clienteDe, horario, horasDe, huecos, pisoDe, requeridasTurno, resumenSemana } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
 import { Avatar, Boton, Card, TurnoIcono, cx } from '../components/ui';
 import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
@@ -111,7 +111,7 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
                     <TurnoIcono icono={p.turno.icono} className="text-suave" />
                     <div>
                       <div className="font-medium">{fmtDia(p.fecha)}</div>
-                      <div className="text-xs text-suave">{p.turno.nombre} · {fmtHora(horario(p.turno, p.fecha).inicio)}–{fmtHora(horario(p.turno, p.fecha).fin)} h · <span className="font-medium text-alerta">falta{p.faltan > 1 ? `n ${p.faltan}` : " 1"} {p.pisos.length ? `en ${p.pisos.join(", ")}` : `(${p.hay}/${p.req})`}</span></div>
+                      <div className="text-xs text-suave">{p.turno.nombre} · {fmtHora(horario(p.turno, p.fecha).inicio)}–{fmtHora(horario(p.turno, p.fecha).fin)} h · <span className="font-medium text-alerta">falta{p.faltan > 1 ? `n ${p.faltan}` : " 1"} {p.donde.length ? `· ${p.donde.join(", ")}` : `(${p.hay}/${p.req})`}</span></div>
                     </div>
                   </div>
                   <Boton chico variante="suave" onClick={() => setModal({ fecha: p.fecha, turnoId: p.turno.id })}>
@@ -143,7 +143,7 @@ function FilaTurno({
   const ordenPiso = (id?: string) => { const i = db.pisos.findIndex((p) => p.id === id); return i < 0 ? 99 : i; };
   const lista = db.asignaciones
     .filter((a) => a.fecha === fecha && a.turnoId === turnoId)
-    .sort((a, b) => ordenPiso(a.pisoId) - ordenPiso(b.pisoId));
+    .sort((a, b) => ordenPiso(pisoDe(db, a)) - ordenPiso(pisoDe(db, b)));
   const col = PALETA[t.color];
   const hay = lista.filter((a) => a.estado !== "falto").length;
 
@@ -178,7 +178,7 @@ function FilaTurno({
                 <div className="min-w-0">
                   <div className={cx('truncate text-sm font-medium hover:underline', a.estado === 'falto' && 'text-suave line-through')}>{c.nombre}</div>
                   <div className="text-xs text-suave">
-                    {db.pisos.find((p) => p.id === a.pisoId)?.nombre ? `${db.pisos.find((p) => p.id === a.pisoId)!.nombre} · ` : ""}{fmtHora(a.inicio)}–{fmtHora(a.fin)} h · {fmtHoras(horasDe(a))}
+                    {[clienteDe(db, a)?.nombre, db.pisos.find((p) => p.id === pisoDe(db, a))?.nombre].filter(Boolean).map((s) => `${s} · `).join("")}{fmtHora(a.inicio)}–{fmtHora(a.fin)} h · {fmtHoras(horasDe(a))}
                     {a.nota ? ` · ${a.nota}` : ''}
                   </div>
                 </div>

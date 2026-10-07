@@ -1,4 +1,4 @@
-import type { Asignacion, DB, Piso, Turno } from './types';
+import type { Asignacion, Cliente, DB, Turno } from './types';
 import { aMin, duracion, hoy, parse, sumarDias } from './fechas';
 
 export const horasDe = (a: Pick<Asignacion, 'inicio' | 'fin'>) => duracion(a.inicio, a.fin);
@@ -78,36 +78,52 @@ export function horario(t: Turno, fecha: string) {
   return ex && ex.dia === diaSemana(fecha) ? { inicio: ex.inicio, fin: ex.fin } : { inicio: t.inicio, fin: t.fin };
 }
 
-/** Cuántas cuidadoras cubren un turno (y opcionalmente un piso) en una fecha. Las que faltaron no cuentan. */
-export const cubiertas = (db: DB, fecha: string, turnoId: string, pisoId?: string) =>
+/** Cliente de una asignación y piso donde se trabaja (el del cliente, o el de la asignación si no tiene cliente). */
+export const clienteDe = (db: DB, a: Pick<Asignacion, 'clienteId'>) =>
+  a.clienteId ? db.clientes.find((c) => c.id === a.clienteId) : undefined;
+export const pisoDe = (db: DB, a: Pick<Asignacion, 'clienteId' | 'pisoId'>) => clienteDe(db, a)?.pisoId ?? a.pisoId;
+
+export const clientesActivos = (db: DB) => {
+  const orden = (id?: string) => { const i = db.pisos.findIndex((p) => p.id === id); return i < 0 ? 99 : i; };
+  return db.clientes.filter((c) => c.activo).sort((a, b) => orden(a.pisoId) - orden(b.pisoId) || a.nombre.localeCompare(b.nombre));
+};
+
+/** Cuidadoras que necesita un cliente en un turno. */
+export const requeridasCliente = (c: Cliente, turnoId: string) => (c.activo ? c.requeridas[turnoId] ?? 0 : 0);
+
+/** Cuidadoras que necesita un turno en total (suma de clientes, o el número del turno si no hay clientes). */
+export const requeridasTurno = (db: DB, t: Turno) => {
+  const cs = clientesActivos(db);
+  return cs.length ? cs.reduce((s, c) => s + requeridasCliente(c, t.id), 0) : Math.max(1, t.requeridas ?? 1);
+};
+
+/** Cuántas cuidadoras cubren un turno en una fecha, opcionalmente para un cliente o piso. Las que faltaron no cuentan. */
+export const cubiertas = (db: DB, fecha: string, turnoId: string, filtro: { clienteId?: string; pisoId?: string } = {}) =>
   db.asignaciones.filter(
-    (a) => a.fecha === fecha && a.turnoId === turnoId && a.estado !== 'falto' && (pisoId === undefined || a.pisoId === pisoId),
+    (a) =>
+      a.fecha === fecha && a.turnoId === turnoId && a.estado !== 'falto' &&
+      (!filtro.clienteId || a.clienteId === filtro.clienteId) &&
+      (!filtro.pisoId || pisoDe(db, a) === filtro.pisoId),
   ).length;
 
-/** Cuidadoras que necesita un piso en un turno. */
-export const requeridasPiso = (p: Piso, turnoId: string) => p.requeridas[turnoId] ?? 0;
-
-/** Cuidadoras que necesita un turno en total (suma de pisos, o el número del turno si no hay pisos). */
-export const requeridasTurno = (db: DB, t: Turno) =>
-  db.pisos.length ? db.pisos.reduce((s, p) => s + requeridasPiso(p, t.id), 0) : Math.max(1, t.requeridas ?? 1);
-
-/** Turnos a los que les falta gente a partir de una fecha (con pisos, se mira piso por piso). */
+/** Turnos a los que les falta gente a partir de una fecha (con clientes, se mira cliente por cliente). */
 export function huecos(db: DB, desde: string, dias: number) {
-  const out: { fecha: string; turno: Turno; hay: number; req: number; faltan: number; pisos: string[] }[] = [];
+  const out: { fecha: string; turno: Turno; hay: number; req: number; faltan: number; donde: string[] }[] = [];
+  const cs = clientesActivos(db);
   for (let i = 0; i < dias; i++) {
     const fecha = sumarDias(desde, i);
     for (const t of db.turnos) {
       const hay = cubiertas(db, fecha, t.id);
       const req = requeridasTurno(db, t);
       let faltan = 0;
-      const pisos: string[] = [];
-      if (db.pisos.length) {
-        for (const p of db.pisos) {
-          const f = Math.max(0, requeridasPiso(p, t.id) - cubiertas(db, fecha, t.id, p.id));
-          if (f) { faltan += f; pisos.push(p.nombre); }
+      const donde: string[] = [];
+      if (cs.length) {
+        for (const c of cs) {
+          const f = Math.max(0, requeridasCliente(c, t.id) - cubiertas(db, fecha, t.id, { clienteId: c.id }));
+          if (f) { faltan += f; donde.push(c.nombre); }
         }
       } else faltan = Math.max(0, req - hay);
-      if (faltan > 0) out.push({ fecha, turno: t, hay, req, faltan, pisos });
+      if (faltan > 0) out.push({ fecha, turno: t, hay, req, faltan, donde });
     }
   }
   return out;

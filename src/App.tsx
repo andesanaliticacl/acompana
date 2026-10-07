@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, PiggyBank, Settings, Sun, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { CalendarDays, HeartPulse, PiggyBank, Settings, Sun, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { Hoy } from './screens/Hoy';
 import { Semana } from './screens/Semana';
 import { Cuidadoras } from './screens/Cuidadoras';
+import { Clientes } from './screens/Clientes';
 import { Pagos } from './screens/Pagos';
 import { Caja } from './screens/Caja';
 import { Ajustes } from './screens/Ajustes';
 import { Logo, cx } from './components/ui';
 
-export type Tab = 'hoy' | 'semana' | 'cuidadoras' | 'pagos' | 'caja' | 'ajustes';
+export type Tab = 'hoy' | 'semana' | 'cuidadoras' | 'clientes' | 'pagos' | 'caja' | 'ajustes';
 
 const NAV: { id: Tab; label: string; icon: LucideIcon }[] = [
   { id: 'hoy', label: 'Hoy', icon: Sun },
   { id: 'semana', label: 'Calendario', icon: CalendarDays },
   { id: 'cuidadoras', label: 'Cuidadoras', icon: Users },
+  { id: 'clientes', label: 'Clientes', icon: HeartPulse },
   { id: 'pagos', label: 'Pagos', icon: Wallet },
   { id: 'caja', label: 'Caja', icon: PiggyBank },
 ];
@@ -69,6 +71,7 @@ export default function App() {
           {tab === 'hoy' && <Hoy ir={ir} />}
           {tab === 'semana' && <Semana />}
           {tab === 'cuidadoras' && <Cuidadoras />}
+          {tab === 'clientes' && <Clientes />}
           {tab === 'pagos' && <Pagos />}
           {tab === 'caja' && <Caja />}
           {tab === 'ajustes' && <Ajustes />}
@@ -77,10 +80,10 @@ export default function App() {
 
       {/* Navegación inferior (celular) */}
       <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-linea bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
-        <div className="grid grid-cols-5">
+        <div className="grid grid-cols-6">
           {NAV.map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => ir(id)} className={cx('flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium', tab === id ? 'text-primario' : 'text-suave')}>
-              <span className={cx('rounded-lg px-4 py-1 transition', tab === id && 'bg-primario-50')}>
+            <button key={id} onClick={() => ir(id)} className={cx('flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium', tab === id ? 'text-primario' : 'text-suave')}>
+              <span className={cx('rounded-lg px-3 py-1 transition', tab === id && 'bg-primario-50')}>
                 <Icon size={21} strokeWidth={1.9} />
               </span>
               {label}

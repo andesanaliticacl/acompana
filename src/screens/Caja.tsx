@@ -64,7 +64,7 @@ export function Caja() {
   });
   const maxSem = Math.max(1, ...porSemana.flatMap((s) => [s.ing, s.gas]));
 
-  const clientes = [...new Set(db.movimientos.map((m) => m.cliente).filter(Boolean))] as string[];
+  const clientes = [...new Set([...db.clientes.map((k) => k.nombre), ...db.movimientos.map((m) => m.cliente)].filter(Boolean))] as string[];
   const nuevo = (tipo: Movimiento['tipo']): Movimiento => ({ id: uid(), fecha: h, tipo, concepto: tipo === 'ingreso' ? 'Cuidado semanal' : '', monto: 0, cliente: '', medio: 'transferencia' });
 
   const exportar = () => {

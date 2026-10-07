@@ -1,5 +1,5 @@
 import { useEffect, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import { Clock, HeartHandshake, Moon, Star, Sun, Sunset, X } from 'lucide-react';
+import { Clock, HeartHandshake, Minus, Moon, Plus, Star, Sun, Sunset, X } from 'lucide-react';
 import { PALETA, type ColorKey } from '../lib/colores';
 import { ESTADOS, tonoRasgo, type Cuidadora, type Estado, type IconoTurno } from '../lib/types';
 
@@ -210,4 +210,18 @@ export function Titulo({ titulo, sub, children }: { titulo: string; sub?: ReactN
 
 export function ColorDot({ color, size = 10 }: { color: ColorKey; size?: number }) {
   return <span className="inline-block shrink-0 rounded-full" style={{ width: size, height: size, background: PALETA[color].dot }} />;
+}
+
+export function Contador({ valor, min, onChange }: { valor: number; min: number; onChange: (v: number) => void }) {
+  return (
+    <div className="flex items-center overflow-hidden rounded-lg border border-[#d1d5db] bg-white shadow-sm">
+      <button className="px-3 py-2.5 hover:bg-fondo disabled:opacity-30" disabled={valor <= min} onClick={() => onChange(Math.max(min, valor - 1))} aria-label="Menos">
+        <Minus size={15} />
+      </button>
+      <span className="w-9 text-center font-semibold tabular-nums">{valor}</span>
+      <button className="px-3 py-2.5 hover:bg-fondo" onClick={() => onChange(valor + 1)} aria-label="Más">
+        <Plus size={15} />
+      </button>
+    </div>
+  );
 }
