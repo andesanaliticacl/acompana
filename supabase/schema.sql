@@ -58,7 +58,7 @@ create table clientes (                        -- apoderado que contrata y paga
 create table personas (                        -- adulto mayor cuidado, a cargo de un cliente
   id uuid primary key default gen_random_uuid(),
   agencia_id uuid not null references agencias(id) on delete cascade,
-  persona_id uuid references personas(id) on delete set null,
+  cliente_id uuid references clientes(id) on delete set null,
   piso_id uuid references pisos(id) on delete set null,
   nombre text not null,
   fecha_nacimiento date,
