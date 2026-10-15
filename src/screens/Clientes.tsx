@@ -54,7 +54,7 @@ export function Clientes({ param }: { param?: string }) {
         )}
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div data-tour="cli-lista" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {lista.map((c) => {
           const pago = pagoSemana(c);
           const tel = c.telefono.replace(/\D/g, '').length > 6;

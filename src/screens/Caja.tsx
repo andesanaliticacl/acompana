@@ -107,7 +107,7 @@ export function Caja() {
         </div>
       </div>
 
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div data-tour="caja-kpis" className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Ingresos" valor={ingresos} clase="bg-ok-50 text-ok" />
         <Kpi label="Pagos a cuidadoras" valor={pagosCuid} clase="bg-info-50 text-info" />
         <Kpi label="Otros gastos" valor={otrosGastos} clase="bg-aviso-50 text-aviso" />

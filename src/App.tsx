@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, HeartPulse, PiggyBank, Search, Settings, Sun, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { CalendarDays, GraduationCap, HeartPulse, PiggyBank, Search, Settings, Sun, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { Hoy } from './screens/Hoy';
 import { Semana } from './screens/Semana';
 import { Cuidadoras } from './screens/Cuidadoras';
@@ -8,6 +8,7 @@ import { Pagos } from './screens/Pagos';
 import { Caja } from './screens/Caja';
 import { Ajustes } from './screens/Ajustes';
 import { Buscador } from './components/Buscador';
+import { Tutorial } from './components/Tutorial';
 import { Logo, cx } from './components/ui';
 
 export type Tab = 'hoy' | 'semana' | 'cuidadoras' | 'clientes' | 'pagos' | 'caja' | 'ajustes';
@@ -32,6 +33,13 @@ const leerRuta = (): { tab: Tab; param?: string } => {
 export default function App() {
   const [ruta, setRuta] = useState(leerRuta);
   const [buscar, setBuscar] = useState(false);
+  const [tour, setTour] = useState<number | null>(null);
+
+  const iniciarTutorial = () => {
+    try { localStorage.setItem("acompana-vista", "dia"); } catch { /* ignorar */ }
+    setBuscar(false);
+    setTour(0);
+  };
   const { tab, param } = ruta;
 
   useEffect(() => {
@@ -67,6 +75,7 @@ export default function App() {
         </div>
         <div className="px-3 pt-3">
           <button
+            data-tour="buscar"
             onClick={() => setBuscar(true)}
             className="flex w-full items-center gap-2 rounded-lg border border-[#d1d5db] bg-white px-3 py-2 text-left text-sm text-suave shadow-sm hover:bg-fondo"
           >
@@ -80,6 +89,7 @@ export default function App() {
           ))}
         </nav>
         <div className="border-t border-linea p-3">
+          <ItemNav id="hoy" label="Tutorial" icon={GraduationCap} activo={tour !== null} onClick={iniciarTutorial} />
           <ItemNav id="ajustes" label="Ajustes" icon={Settings} activo={tab === 'ajustes'} onClick={() => ir('ajustes')} />
         </div>
       </aside>
@@ -89,7 +99,10 @@ export default function App() {
         <div className="flex items-center justify-between gap-2 px-4 py-2.5">
           <Logo />
           <div className="flex gap-1">
-            <button onClick={() => setBuscar(true)} className="rounded-lg p-2.5 text-suave" aria-label="Buscar">
+            <button onClick={iniciarTutorial} className="rounded-lg p-2.5 text-suave" aria-label="Tutorial">
+              <GraduationCap size={22} />
+            </button>
+            <button data-tour="buscar" onClick={() => setBuscar(true)} className="rounded-lg p-2.5 text-suave" aria-label="Buscar">
               <Search size={22} />
             </button>
             <button onClick={() => ir('ajustes')} className={cx('rounded-lg p-2.5', tab === 'ajustes' ? 'bg-primario-50 text-primario' : 'text-suave')} aria-label="Ajustes">
@@ -125,6 +138,7 @@ export default function App() {
         </div>
       </nav>
 
+      {tour !== null && <Tutorial paso={tour} setPaso={setTour} ir={ir} onClose={() => setTour(null)} />}
       {buscar && <Buscador onClose={() => setBuscar(false)} ir={(t, p) => { setBuscar(false); ir(t, p); }} />}
     </div>
   );

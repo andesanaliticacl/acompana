@@ -42,14 +42,14 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
           <Boton chico variante="suave" onClick={() => ir('caja')}>
             <Plus size={16} /> Registrar ingreso
           </Boton>
-          <Boton chico onClick={() => setModal({ fecha: h })}>
+          <Boton chico data-tour="hoy-asignar" onClick={() => setModal({ fecha: h })}>
             <CalendarPlus size={16} /> Asignar turno
           </Boton>
         </div>
       </div>
 
       {/* Indicadores */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+      <div data-tour="hoy-resumen" className="mb-4 grid gap-3 sm:grid-cols-2">
         <button onClick={() => ir('pagos')} className="rounded-xl border border-linea bg-white p-4 text-left shadow-[0_1px_2px_rgba(16,24,40,.04)] transition hover:border-primario-200">
           <div className="flex items-center gap-2 text-sm text-suave">
             <Wallet size={16} /> A pagar el domingo {fmtDia(domingo).split(' ').slice(1).join(' ')}
@@ -70,7 +70,7 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          <Card className="!p-0">
+          <Card tour="hoy-turnos" className="!p-0">
             <div className="flex items-center justify-between border-b border-linea px-4 py-3">
               <h2 className="font-semibold">Turnos de hoy</h2>
               <span className="text-xs text-suave">Marca la asistencia al llegar cada cuidadora</span>

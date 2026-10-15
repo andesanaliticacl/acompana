@@ -25,7 +25,7 @@ export function Ajustes() {
         </Campo>
       </Card>
 
-      <Card className="mb-4 !p-0">
+      <Card tour="ajustes-turnos" className="mb-4 !p-0">
         <div className="flex items-center justify-between border-b border-linea px-4 py-3">
           <div>
             <h2 className="font-semibold">Turnos</h2>

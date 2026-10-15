@@ -68,14 +68,14 @@ export function Semana({ param }: { param?: string }) {
   return (
     <div>
       <Titulo titulo="Calendario">
-        <Segmentado<Vista>
+        <div data-tour="cal-vistas"><Segmentado<Vista>
           valor={vista}
           onChange={setVista}
           opciones={[
             { id: 'dia', label: <><CalendarDays size={15} /> Día a día</> },
             { id: 'cuidadora', label: <><Users size={15} /> Semana por cuidadora</> },
           ]}
-        />
+        /></div>
       </Titulo>
 
       {/* Navegación: semana + selector de día */}
@@ -104,7 +104,7 @@ export function Semana({ param }: { param?: string }) {
             </Boton>
           </div>
         </div>
-        <div className="grid grid-cols-7 gap-1.5">
+        <div data-tour="cal-dias" className="grid grid-cols-7 gap-1.5">
           {dias.map((d, i) => {
             const faltan = huecos(db, d, 1).reduce((s, x) => s + x.faltan, 0);
             const sel = vista === 'dia' && d === fecha;
@@ -209,7 +209,7 @@ function VistaDia({ fecha, filtro, onFiltro, onModal }: { fecha: string; filtro:
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-52 flex-1">
+        <div data-tour="cal-buscar" className="relative min-w-52 flex-1">
           <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-suave" />
           <input className={cx(inputCls, '!py-2 pl-9')} placeholder="Buscar residente, cliente o cuidadora…" value={filtro} onChange={(e) => onFiltro(e.target.value)} />
           {filtro && (
@@ -230,7 +230,7 @@ function VistaDia({ fecha, filtro, onFiltro, onModal }: { fecha: string; filtro:
         )}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-linea bg-white shadow-[0_1px_2px_rgba(16,24,40,.04)]">
+      <div data-tour="cal-tabla" className="overflow-hidden rounded-xl border border-linea bg-white shadow-[0_1px_2px_rgba(16,24,40,.04)]">
         {/* Encabezado: Residente | Día | Noche */}
         <div className="grid border-b border-linea" style={{ gridTemplateColumns: columnas }}>
           <div className="px-3 py-2.5 text-xs font-medium text-suave">Residente</div>

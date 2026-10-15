@@ -5,10 +5,11 @@ import { ESTADOS, tonoRasgo, type Cuidadora, type Estado, type IconoTurno } from
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
-export function Card({ className, children, onClick }: { className?: string; children: ReactNode; onClick?: () => void }) {
+export function Card({ className, children, onClick, tour }: { className?: string; children: ReactNode; onClick?: () => void; tour?: string }) {
   return (
     <div
       onClick={onClick}
+      data-tour={tour}
       className={cx(
         'rounded-xl border border-linea bg-white p-4 shadow-[0_1px_2px_rgba(16,24,40,.04)]',
         onClick && 'cursor-pointer transition hover:border-primario-200 hover:shadow-md',

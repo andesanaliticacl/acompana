@@ -15,7 +15,8 @@ Gestión de turnos, pagos y caja para una empresa de cuidadoras de adultos mayor
 | **Cuidadoras** | Ficha con edad, experiencia, valoración de la dueña (estrellas), rasgos (amable, puntual, seria, impuntual…), descripción, notas privadas. Asistencia y **puntualidad real** calculadas de lo que se marca cada día. WhatsApp / llamar. |
 | **Pagos** | Cada domingo: horas × valor hora, bono o descuento, marcar pagado, avisar por WhatsApp. Export a Excel. |
 | **Caja** | Ingresos (familias/clientes) y gastos por semana o mes. Los pagos a cuidadoras entran solos como gasto. "Te queda" = ganancia. |
-| **Ajustes** | Nombre, editar o agregar turnos, reiniciar datos de ejemplo. |
+| **Ajustes** | Nombre, horarios de turnos, pisos, reiniciar datos de ejemplo. |
+| **Tutorial** | Botón "Tutorial" en el menú: recorrido guiado que ilumina cada parte y explica para qué sirve. Se cierra con "Cerrar tutorial". |
 
 ## Desarrollo
 

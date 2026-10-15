@@ -43,7 +43,7 @@ export function Cuidadoras({ param }: { param?: string }) {
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div data-tour="cuid-lista" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {lista.map((c) => {
           const s = estadisticas(db, c.id);
           return (

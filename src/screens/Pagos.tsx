@@ -55,7 +55,7 @@ export function Pagos() {
         </button>
       </div>
 
-      <div className="mb-5 rounded-xl border border-linea bg-white">
+      <div data-tour="pagos-resumen" className="mb-5 rounded-xl border border-linea bg-white">
         <div className="grid gap-4 p-5 sm:grid-cols-3">
           <div>
             <div className="text-sm font-semibold text-suave">Total de la semana</div>
