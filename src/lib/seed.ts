@@ -131,5 +131,5 @@ export function crearSeed(): DB {
 }
 
 export const dbVacia = (): DB => ({
-  cuidadoras: [], turnos: TURNOS_BASE, pisos: PISOS_BASE, clientes: [], personas: [], asignaciones: [], pagos: [], movimientos: [], ajustes: { nombreDuena: '' },
+  cuidadoras: [], turnos: TURNOS_BASE, pisos: [], clientes: [], personas: [], asignaciones: [], pagos: [], movimientos: [], ajustes: { nombreDuena: "" },
 });

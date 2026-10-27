@@ -69,7 +69,7 @@ export function Cuidadoras({ param }: { param?: string }) {
             </Card>
           );
         })}
-        {lista.length === 0 && <p className="text-suave">No hay cuidadoras que coincidan.</p>}
+        {lista.length === 0 && <p className="text-suave">{db.cuidadoras.length ? "No hay cuidadoras que coincidan." : "Aún no hay cuidadoras. Toca \"Nueva\" para agregar la primera."}</p>}
       </div>
 
       {vista && <Perfil c={vista} onClose={() => setVerId(null)} onEditar={() => { setEditar(vista); setVerId(null); }} />}
@@ -245,6 +245,7 @@ function FormCuidadora({ inicial, onClose, onGuardada }: { inicial: Cuidadora; o
         <label className="flex items-center gap-2 font-semibold">
           <input type="checkbox" className="size-5" checked={f.activa} onChange={(e) => set({ activa: e.target.checked })} /> Activa en el equipo
         </label>
+        <div className="sticky bottom-0 -mx-5 -mb-6 border-t border-linea bg-white px-5 py-3">
         <Boton
           className="w-full"
           disabled={!f.nombre.trim()}
@@ -255,6 +256,7 @@ function FormCuidadora({ inicial, onClose, onGuardada }: { inicial: Cuidadora; o
         >
           Guardar
         </Boton>
+        </div>
       </div>
     </Modal>
   );

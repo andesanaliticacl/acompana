@@ -95,10 +95,10 @@ export const personasActivas = (db: DB) => {
 /** Cuidadoras que necesita una persona en un turno. */
 export const requeridasPersona = (p: Persona, turnoId: string) => (p.activa ? p.requeridas[turnoId] ?? 0 : 0);
 
-/** Cuidadoras que necesita un turno en total (suma de personas, o el número del turno si no hay personas). */
+/** Cuidadoras que necesita un turno en total: la suma de lo que necesita cada residente (0 si no hay residentes). */
 export const requeridasTurno = (db: DB, t: Turno) => {
   const cs = personasActivas(db);
-  return cs.length ? cs.reduce((s, c) => s + requeridasPersona(c, t.id), 0) : Math.max(1, t.requeridas ?? 1);
+  return cs.reduce((s, c) => s + requeridasPersona(c, t.id), 0);
 };
 
 /** Cuántas cuidadoras cubren un turno en una fecha, opcionalmente para una persona o piso. Las que faltaron no cuentan. */

@@ -119,7 +119,7 @@ export function Clientes({ param }: { param?: string }) {
             </Card>
           );
         })}
-        {lista.length === 0 && <p className="text-suave">No hay clientes que coincidan.</p>}
+        {lista.length === 0 && <p className="text-suave">{db.clientes.length ? "No hay clientes que coincidan." : "Aún no hay clientes. Toca \"Nuevo cliente\" para agregar el primero con su residente."}</p>}
       </div>
 
       {editar && <FormCliente inicial={editar} onClose={() => setEditar(null)} />}
@@ -214,7 +214,7 @@ function FormCliente({ inicial, onClose }: { inicial: Cliente; onClose: () => vo
         <label className="flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" className="size-4" checked={f.activo} onChange={(e) => set({ activo: e.target.checked })} /> Cliente activo
         </label>
-        <div className="border-t border-linea pt-4">
+        <div className="sticky bottom-0 -mx-5 -mb-6 border-t border-linea bg-white px-5 py-3">
           <Boton className="w-full" disabled={!f.nombre.trim()} onClick={guardar}>
             Guardar
           </Boton>

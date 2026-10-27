@@ -4,7 +4,7 @@ import type { IconoTurno, Turno } from '../lib/types';
 import { DIAS_CORTOS, duracion, fmtHoras, uid } from '../lib/fechas';
 import { COLORES, PALETA } from '../lib/colores';
 import { requeridasTurno } from '../lib/calculos';
-import { Boton, Campo, Card, Contador, OPCIONES_ICONO, Titulo, TurnoIcono, cx, inputCls } from '../components/ui';
+import { Boton, Campo, Card, OPCIONES_ICONO, Titulo, TurnoIcono, cx, inputCls } from '../components/ui';
 
 
 const DIAS_LARGOS =['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -59,17 +59,11 @@ export function Ajustes() {
               </div>
 
               <div className="flex flex-wrap items-end gap-4">
-                {db.personas.length ? (
-                  <Campo label="Cuidadoras por turno">
-                    <div className="py-2.5 text-sm text-suave">
-                      <b className="text-tinta">{requeridasTurno(db, t)}</b> en total (según residentes)
-                    </div>
-                  </Campo>
-                ) : (
-                  <Campo label="Cuidadoras por turno">
-                    <Contador valor={t.requeridas ?? 1} min={1} onChange={(v) => editarTurno(t, { requeridas: v })} />
-                  </Campo>
-                )}
+                <Campo label="Cuidadoras por turno">
+                  <div className="py-2.5 text-sm text-suave">
+                    <b className="text-tinta">{requeridasTurno(db, t)}</b> en total · se calcula con los residentes (en Clientes)
+                  </div>
+                </Campo>
 
                 <Campo label="Horario especial">
                   <div className="flex flex-wrap items-center gap-2">

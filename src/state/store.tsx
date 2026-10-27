@@ -67,7 +67,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     remove: (col, id) =>
       setDb((d) => ({ ...d, [col]: (d[col] as { id: string }[]).filter((x) => x.id !== id) }) as DB),
     setAjustes: (a) => setDb((d) => ({ ...d, ajustes: { ...d.ajustes, ...a } })),
-    reiniciar: (modo) => setDb(modo === 'demo' ? crearSeed() : dbVacia()),
+    reiniciar: (modo) => {
+      try { ['acompana-vista', 'acompana-agrupar'].forEach((k) => localStorage.removeItem(k)); } catch { /* ignorar */ }
+      setDb(modo === 'demo' ? crearSeed() : dbVacia());
+    },
   };
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;

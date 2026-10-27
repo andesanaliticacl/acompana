@@ -31,6 +31,7 @@ export function Semana({ param }: { param?: string }) {
   const lunes = lunesDe(fecha);
   const dias = diasSemana(lunes);
   const delaSemana = asignacionesSemana(db, lunes);
+  const sinRequisitos = db.turnos.every((t) => requeridasTurno(db, t) === 0);
 
   const setVista = (v: Vista) => {
     setVistaState(v);
@@ -107,6 +108,7 @@ export function Semana({ param }: { param?: string }) {
         <div data-tour="cal-dias" className="grid grid-cols-7 gap-1.5">
           {dias.map((d, i) => {
             const faltan = huecos(db, d, 1).reduce((s, x) => s + x.faltan, 0);
+            const vacio = sinRequisitos;
             const sel = vista === 'dia' && d === fecha;
             return (
               <button
@@ -119,8 +121,8 @@ export function Semana({ param }: { param?: string }) {
               >
                 <span className={cx('text-[11px] font-medium uppercase', sel ? 'text-white/80' : 'text-suave')}>{DIAS_CORTOS[i]}</span>
                 <span className={cx('text-lg leading-tight font-semibold', !sel && d === h && 'text-primario')}>{Number(d.slice(8))}</span>
-                {/* Celular: punto verde o número rojo · Computador: texto */}
-                <span className="mt-1 sm:hidden">
+                {/* Celular: punto verde o número rojo · Computador: texto (nada si aún no hay residentes) */}
+                <span className={cx('mt-1 sm:hidden', vacio && 'invisible')}>
                   {faltan ? (
                     <span className={cx('grid size-4 place-items-center rounded-full text-[10px] font-bold', sel ? 'bg-white text-alerta' : 'bg-alerta text-white')}>{faltan}</span>
                   ) : (
@@ -130,6 +132,7 @@ export function Semana({ param }: { param?: string }) {
                 <span
                   className={cx(
                     'mt-0.5 hidden rounded px-1 text-[10px] font-semibold sm:inline',
+                    vacio && 'invisible',
                     faltan ? (sel ? 'bg-white text-alerta' : 'bg-alerta-50 text-alerta') : sel ? 'text-white/80' : 'text-ok',
                   )}
                 >
@@ -202,7 +205,7 @@ function VistaDia({ fecha, filtro, onFiltro, onModal }: { fecha: string; filtro:
           {turnos.map((t) => (
             <span key={t.id} className="inline-flex items-center gap-1.5 text-sm text-suave">
               <TurnoIcono icono={t.icono} size={15} /> {t.nombre}
-              <Cobertura hay={delDia.filter((a) => a.turnoId === t.id && a.estado !== 'falto').length} req={requeridasTurno(db, t)} />
+              {requeridasTurno(db, t) > 0 && <Cobertura hay={delDia.filter((a) => a.turnoId === t.id && a.estado !== 'falto').length} req={requeridasTurno(db, t)} />}
             </span>
           ))}
         </div>

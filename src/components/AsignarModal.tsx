@@ -206,7 +206,7 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-2 border-t border-linea pt-4">
+        <div className="sticky bottom-0 -mx-5 -mb-6 flex flex-wrap items-center gap-2 border-t border-linea bg-white px-5 py-3">
           <Boton onClick={guardar} disabled={!elegidas.length} className="flex-1">
             {existente ? 'Guardar cambios' : elegidas.length > 1 ? `Asignar ${elegidas.length} cuidadoras` : 'Asignar'}
           </Boton>

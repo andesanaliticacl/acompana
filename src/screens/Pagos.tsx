@@ -56,20 +56,20 @@ export function Pagos() {
       </div>
 
       <div data-tour="pagos-resumen" className="mb-5 rounded-xl border border-linea bg-white">
-        <div className="grid gap-4 p-5 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 p-4 sm:grid-cols-3 sm:p-5">
           <div>
-            <div className="text-sm font-semibold text-suave">Total de la semana</div>
-            <div className="text-2xl font-semibold">{clp(total)}</div>
-            <div className="text-sm text-suave">{fmtHoras(horas)} trabajadas</div>
+            <div className="text-xs font-semibold text-suave sm:text-sm">Total de la semana</div>
+            <div className="text-lg font-semibold sm:text-2xl">{clp(total)}</div>
+            <div className="text-xs text-suave sm:text-sm">{fmtHoras(horas)} trabajadas</div>
           </div>
           <div>
-            <div className="text-sm font-semibold text-suave">Ya pagado</div>
-            <div className="text-2xl font-semibold text-ok">{clp(pagado)}</div>
+            <div className="text-xs font-semibold text-suave sm:text-sm">Ya pagado</div>
+            <div className="text-lg font-semibold sm:text-2xl text-ok">{clp(pagado)}</div>
           </div>
-          <div>
-            <div className="text-sm font-semibold text-suave">Por pagar · {fmtDia(domingo)}</div>
+          <div className="order-first col-span-2 border-b border-linea pb-3 sm:order-none sm:col-span-1 sm:border-0 sm:pb-0">
+            <div className="text-xs font-semibold text-suave sm:text-sm">Por pagar · {fmtDia(domingo)}</div>
             <div className="text-2xl font-semibold text-primario">{clp(total - pagado)}</div>
-            <div className="text-sm text-suave">
+            <div className="text-xs text-suave sm:text-sm">
               {falta > 0 ? `en ${falta} día${falta > 1 ? 's' : ''} (estimado)` : falta === 0 ? '¡hoy es domingo de pago!' : 'semana cerrada'}
             </div>
           </div>
