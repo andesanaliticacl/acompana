@@ -1,4 +1,4 @@
-import { Moon, Plus, RotateCcw, Sun, SunMoon, Trash2 } from 'lucide-react';
+import { Moon, Plus, Sparkles, Sun, SunMoon, Trash2 } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { IconoTurno, Turno } from '../lib/types';
 import { DIAS_CORTOS, duracion, fmtHoras, uid } from '../lib/fechas';
@@ -178,14 +178,14 @@ export function Ajustes() {
       <Card>
         <h2 className="mb-1 font-semibold">Datos</h2>
         <p className="mb-3 text-sm text-suave">
-          Versión de demostración: la información se guarda solo en este equipo. En la versión final queda en la nube, respaldada y disponible desde el celular y el computador.
+          La app parte en blanco. Puedes llenarla con datos de ejemplo para mostrarla o practicar, y volver a dejarla en blanco cuando quieras. Por ahora la información se guarda solo en este equipo.
         </p>
         <div className="flex flex-wrap gap-2">
-          <Boton chico variante="suave" onClick={() => confirm('¿Volver a cargar los datos de ejemplo? Se perderán los cambios.') && reiniciar('demo')}>
-            <RotateCcw size={16} /> Datos de ejemplo
+          <Boton chico variante="suave" onClick={() => confirm('¿Llenar con datos de ejemplo? Se reemplaza lo que hayas ingresado.') && reiniciar('demo')}>
+            <Sparkles size={16} /> Llenar con datos de ejemplo
           </Boton>
-          <Boton chico variante="fantasma" onClick={() => confirm('¿Empezar en blanco? Se borra todo lo de esta demo.') && reiniciar('vacio')}>
-            <Trash2 size={16} /> Empezar en blanco
+          <Boton chico variante="fantasma" onClick={() => confirm('¿Dejar la app en blanco? Se borra todo lo ingresado.') && reiniciar('vacio')}>
+            <Trash2 size={16} /> Dejar en blanco
           </Boton>
         </div>
       </Card>

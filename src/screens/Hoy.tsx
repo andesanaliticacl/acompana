@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle2, ChevronRight, Plus, Wallet } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronRight, Plus, Sparkles, Wallet } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Asignacion, Estado } from '../lib/types';
 import { ESTADOS } from '../lib/types';
@@ -12,7 +12,7 @@ import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
 import type { Tab } from '../App';
 
 export function Hoy({ ir }: { ir: (t: Tab) => void }) {
-  const { db, upsert } = useStore();
+  const { db, upsert, reiniciar } = useStore();
   const [modal, setModal] = useState<AsignarInicial | null>(null);
   const [verTodos, setVerTodos] = useState(false);
   const h = hoy();
@@ -66,6 +66,15 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
               </li>
             ))}
           </ol>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-linea pt-3">
+            <span className="text-sm text-suave">¿Quieres ver cómo funciona primero?</span>
+            <Boton chico variante="suave" onClick={() => {
+              const hayDatos = db.cuidadoras.length + db.clientes.length + db.asignaciones.length + db.movimientos.length > 0;
+              if (!hayDatos || confirm("Se reemplazará lo que ya ingresaste por datos de ejemplo. ¿Continuar?")) reiniciar("demo");
+            }}>
+              <Sparkles size={15} /> Llenar con datos de ejemplo
+            </Boton>
+          </div>
         </Card>
       )}
 

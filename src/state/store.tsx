@@ -9,7 +9,8 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { DB } from '../lib/types';
 import { crearSeed, dbVacia } from '../lib/seed';
 
-const KEY = 'acompana-demo-v5';
+// v6: desde aquí la app parte en blanco (antes partía con datos de ejemplo)
+const KEY = 'acompana-v6';
 
 type Coleccion = 'cuidadoras' | 'turnos' | 'pisos' | 'clientes' | 'personas' | 'asignaciones' | 'pagos' | 'movimientos';
 type Item<K extends Coleccion> = DB[K][number];
@@ -33,9 +34,9 @@ function cargar(): DB {
       return { ...db, pisos: db.pisos ?? [], clientes: db.clientes ?? [], personas: db.personas ?? [] };
     }
   } catch {
-    /* sin almacenamiento: seguimos con datos de ejemplo */
+    /* sin almacenamiento: partimos en blanco */
   }
-  return crearSeed();
+  return dbVacia();
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
