@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { AlertTriangle, Check, ChevronLeft, ChevronRight, Download, MessageCircle, Undo2 } from 'lucide-react';
+import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronRight, Download, MessageCircle, Undo2 } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Pago } from '../lib/types';
 import { clp, diasEntre, fmtCorto, fmtDia, fmtHoras, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
 import { descargarCSV, linkWhatsApp, resumenSemana } from '../lib/calculos';
-import { Avatar, Boton, Card, Titulo, cx, inputCls, primerNombre } from '../components/ui';
+import { Avatar, Boton, Card, MenuMas, Titulo, cx, inputCls, primerNombre } from '../components/ui';
 
 export function Pagos() {
   const { db, upsert } = useStore();
   const h = hoy();
   const [lunes, setLunes] = useState(lunesDe(h));
+  const [abierto, setAbierto] = useState<string | null>(null);
   const domingo = sumarDias(lunes, 6);
 
   const filas = db.cuidadoras
@@ -37,114 +38,114 @@ export function Pagos() {
 
   return (
     <div>
-      <Titulo titulo="Pagos" sub="Se paga cada domingo por las horas de lunes a domingo">
-        <Boton variante="fantasma" chico onClick={exportar}>
-          <Download size={16} /> Excel
-        </Boton>
-      </Titulo>
+      <Titulo titulo="Pagos" />
 
+      {/* Semana + Más */}
       <div className="mb-4 flex items-center gap-2">
-        <button onClick={() => setLunes(sumarDias(lunes, -7))} className="rounded-lg border border-linea bg-white p-2 shadow-sm hover:bg-fondo" aria-label="Semana anterior">
-          <ChevronLeft size={20} />
+        <button onClick={() => setLunes(sumarDias(lunes, -7))} className="rounded-lg border border-linea bg-white p-2 hover:bg-fondo" aria-label="Semana anterior">
+          <ChevronLeft size={18} />
         </button>
-        <div className="flex-1 text-center text-lg font-semibold">
-          Semana {fmtCorto(lunes)} — {fmtCorto(domingo)}
+        <div className="flex-1 text-center font-semibold">
+          {fmtCorto(lunes)} – {fmtCorto(domingo)}
         </div>
-        <button onClick={() => setLunes(sumarDias(lunes, 7))} className="rounded-lg border border-linea bg-white p-2 shadow-sm hover:bg-fondo" aria-label="Semana siguiente">
-          <ChevronRight size={20} />
+        <button onClick={() => setLunes(sumarDias(lunes, 7))} className="rounded-lg border border-linea bg-white p-2 hover:bg-fondo" aria-label="Semana siguiente">
+          <ChevronRight size={18} />
         </button>
+        <MenuMas label="" items={[{ label: 'Descargar Excel', icon: <Download size={16} />, onClick: exportar }]} />
       </div>
 
-      <div data-tour="pagos-resumen" className="mb-5 rounded-xl border border-linea bg-white">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3 p-4 sm:grid-cols-3 sm:p-5">
-          <div>
-            <div className="text-xs font-semibold text-suave sm:text-sm">Total de la semana</div>
-            <div className="text-lg font-semibold sm:text-2xl">{clp(total)}</div>
-            <div className="text-xs text-suave sm:text-sm">{fmtHoras(horas)} trabajadas</div>
-          </div>
-          <div>
-            <div className="text-xs font-semibold text-suave sm:text-sm">Ya pagado</div>
-            <div className="text-lg font-semibold sm:text-2xl text-ok">{clp(pagado)}</div>
-          </div>
-          <div className="order-first col-span-2 border-b border-linea pb-3 sm:order-none sm:col-span-1 sm:border-0 sm:pb-0">
-            <div className="text-xs font-semibold text-suave sm:text-sm">Por pagar · {fmtDia(domingo)}</div>
-            <div className="text-2xl font-semibold text-primario">{clp(total - pagado)}</div>
-            <div className="text-xs text-suave sm:text-sm">
-              {falta > 0 ? `en ${falta} día${falta > 1 ? 's' : ''} (estimado)` : falta === 0 ? '¡hoy es domingo de pago!' : 'semana cerrada'}
-            </div>
-          </div>
+      {/* 1. Lo que falta pagar */}
+      <div data-tour="pagos-resumen" className="mb-4 rounded-xl border border-linea bg-white p-4">
+        <div className="text-sm text-suave">Por pagar el {fmtDia(domingo).toLowerCase()}</div>
+        <div className="text-3xl font-semibold tracking-tight text-primario tabular-nums">{clp(total - pagado)}</div>
+        <div className="mt-1 text-sm text-suave">
+          Total {clp(total)} · Pagado {clp(pagado)}
+          {falta === 0 && <span className="font-medium text-tinta"> · Hoy es día de pago</span>}
         </div>
       </div>
 
-      <div className="space-y-3">
-        {filas.length === 0 && <Card><p className="text-suave">No hay turnos esta semana.</p></Card>}
-        {filas.map(({ c, r }) => (
-          <Card key={c.id} className={cx(r.pagado && 'bg-[#f6fcf9]')}>
-            <div className="flex flex-wrap items-center gap-4">
-              <div className="flex min-w-48 flex-1 items-center gap-3">
-                <Avatar c={c} size={44} />
-                <div>
-                  <div className="font-semibold">{c.nombre}</div>
-                  <div className="text-sm text-suave">
-                    {r.turnos} turnos · {fmtHoras(r.horas)} × {clp(r.tarifa)}
-                    {r.faltas > 0 && <span className="text-primario"> · {r.faltas} falta{r.faltas > 1 ? 's' : ''}</span>}
-                    {r.atrasos > 0 && <span className="text-aviso"> · {r.atrasos} atraso{r.atrasos > 1 ? 's' : ''}</span>}
-                  </div>
-                  {r.sinConfirmar > 0 && !r.pagado && (
-                    <div className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-aviso">
-                      <AlertTriangle size={13} /> {r.sinConfirmar} turno{r.sinConfirmar > 1 ? 's' : ''} sin marcar asistencia
-                    </div>
+      {/* 2. Una fila por cuidadora; el detalle se abre al tocarla */}
+      <Card className="!p-0">
+        {filas.length === 0 && <p className="px-4 py-8 text-center text-sm text-suave">No hay turnos esta semana.</p>}
+        <ul className="divide-y divide-linea">
+          {filas.map(({ c, r }) => {
+            const monto = r.pagado ? r.pago!.monto : r.total;
+            const abierta = abierto === c.id;
+            return (
+              <li key={c.id}>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <button onClick={() => setAbierto(abierta ? null : c.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                    <span className="hidden sm:block"><Avatar c={c} size={38} /></span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium"><span className="sm:hidden">{primerNombre(c.nombre)}</span><span className="hidden sm:inline">{c.nombre}</span></span>
+                      <span className="flex items-center gap-1 text-sm text-suave">
+                        {fmtHoras(r.horas)}
+                        {r.sinConfirmar > 0 && !r.pagado && <AlertTriangle size={13} className="text-aviso" />}
+                        <ChevronDown size={14} className={cx('transition', abierta && 'rotate-180')} />
+                      </span>
+                    </span>
+                  </button>
+                  <span className="shrink-0 text-right font-semibold tabular-nums">{clp(monto)}</span>
+                  {r.pagado ? (
+                    <span className="inline-flex w-20 shrink-0 items-center justify-center gap-1 rounded-md bg-ok-50 py-1.5 text-xs font-medium text-ok">
+                      <Check size={13} strokeWidth={3} /> Pagado
+                    </span>
+                  ) : (
+                    <Boton chico className="w-20 shrink-0" onClick={() => guardarPago(c.id, { pagadoEl: h, monto: r.total })}>
+                      Pagar
+                    </Boton>
                   )}
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2">
-                <label className="text-right text-xs font-semibold text-suave">
-                  Bono / descuento
-                  <input
-                    type="number"
-                    step={1000}
-                    disabled={r.pagado}
-                    className={cx(inputCls, 'mt-0.5 !w-32 !py-1.5 text-right')}
-                    value={r.ajuste || ''}
-                    placeholder="0"
-                    onChange={(e) => guardarPago(c.id, { ajuste: Number(e.target.value) || 0 })}
-                  />
-                </label>
-              </div>
-
-              <div className="w-32 text-right">
-                <div className="text-2xl font-semibold">{clp(r.pagado ? r.pago!.monto : r.total)}</div>
-                {r.porVenir > 0 && !r.pagado && <div className="text-xs text-suave">incluye {fmtHoras(r.porVenir)} por venir</div>}
-                {r.pagado && <div className="text-xs font-semibold text-ok">Pagado {fmtDia(r.pago!.pagadoEl!)}</div>}
-              </div>
-
-              <div className="flex gap-2">
-                {r.pagado ? (
-                  <>
-                    <a
-                      href={linkWhatsApp(c.telefono, `Hola ${primerNombre(c.nombre)}, te transferí ${clp(r.pago!.monto)} por ${fmtHoras(r.horas)} de la semana ${fmtCorto(lunes)} al ${fmtCorto(domingo)}. ¡Gracias por tu trabajo!`)}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <Boton chico variante="suave" className="!bg-ok-50 !text-ok">
-                        <MessageCircle size={16} /> Avisar
-                      </Boton>
-                    </a>
-                    <Boton chico variante="fantasma" onClick={() => guardarPago(c.id, { pagadoEl: null, monto: 0 })} title="Deshacer pago">
-                      <Undo2 size={16} />
-                    </Boton>
-                  </>
-                ) : (
-                  <Boton chico onClick={() => guardarPago(c.id, { pagadoEl: h, monto: r.total })}>
-                    <Check size={16} /> Marcar pagado
-                  </Boton>
+                {abierta && (
+                  <div className="space-y-3 bg-fondo px-4 py-3 text-sm">
+                    <div className="text-suave">
+                      {r.turnos} turnos · {fmtHoras(r.horas)} × {clp(r.tarifa)} = {clp(r.subtotal)}
+                      {r.faltas > 0 && <span className="text-alerta"> · {r.faltas} falta{r.faltas > 1 ? 's' : ''}</span>}
+                      {r.atrasos > 0 && <span className="text-aviso"> · {r.atrasos} atraso{r.atrasos > 1 ? 's' : ''}</span>}
+                    </div>
+                    {r.sinConfirmar > 0 && !r.pagado && (
+                      <div className="flex items-center gap-1.5 text-aviso">
+                        <AlertTriangle size={14} /> {r.sinConfirmar} turno{r.sinConfirmar > 1 ? 's' : ''} sin marcar asistencia
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <label className="flex items-center gap-2 text-suave">
+                        Bono / descuento
+                        <input
+                          type="number"
+                          step={1000}
+                          disabled={r.pagado}
+                          className={cx(inputCls, '!w-32 !py-1.5 text-right')}
+                          value={r.ajuste || ''}
+                          placeholder="0"
+                          onChange={(e) => guardarPago(c.id, { ajuste: Number(e.target.value) || 0 })}
+                        />
+                      </label>
+                      {r.pagado && (
+                        <>
+                          <a
+                            href={linkWhatsApp(c.telefono, `Hola ${primerNombre(c.nombre)}, te transferí ${clp(r.pago!.monto)} por ${fmtHoras(r.horas)} de la semana ${fmtCorto(lunes)} al ${fmtCorto(domingo)}. ¡Gracias por tu trabajo!`)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            <Boton chico variante="suave">
+                              <MessageCircle size={15} /> Avisarle
+                            </Boton>
+                          </a>
+                          <Boton chico variante="fantasma" onClick={() => guardarPago(c.id, { pagadoEl: null, monto: 0 })}>
+                            <Undo2 size={15} /> Deshacer pago
+                          </Boton>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 )}
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+              </li>
+            );
+          })}
+        </ul>
+      </Card>
     </div>
   );
 }

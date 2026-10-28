@@ -6,7 +6,7 @@ import { ESTADOS } from '../lib/types';
 import { DIAS_CORTOS, diasSemana, fmtCorto, fmtDia, fmtHora, fmtHoras, fmtLargo, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
 import { asignacionesSemana, clienteDe, descargarCSV, horario, horasDe, huecos, personaDe, personasActivas, pisoDe, requeridasPersona, requeridasTurno, resumenSemana } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
-import { Avatar, Boton, Segmentado, Titulo, TurnoIcono, cx, inputCls, primerNombre } from '../components/ui';
+import { Avatar, Boton, MenuMas, Titulo, TurnoIcono, cx, inputCls, primerNombre } from '../components/ui';
 import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
 
 type Vista = 'dia' | 'cuidadora';
@@ -27,6 +27,12 @@ export function Semana({ param }: { param?: string }) {
   const [fecha, setFecha] = useState(esFecha ? param! : h);
   const [filtro, setFiltro] = useState(param && !esFecha ? param : '');
   const [vista, setVistaState] = useState<Vista>(leerVista);
+  const [agrupar, setAgruparState] = useState<Agrupar>(leerAgrupar);
+  const [mostrarBuscar, setMostrarBuscar] = useState(!!filtro);
+  const setAgrupar = (v: Agrupar) => {
+    setAgruparState(v);
+    try { localStorage.setItem('acompana-agrupar', v); } catch { /* ignorar */ }
+  };
   const [modal, setModal] = useState<AsignarInicial | null>(null);
   const lunes = lunesDe(fecha);
   const dias = diasSemana(lunes);
@@ -68,16 +74,7 @@ export function Semana({ param }: { param?: string }) {
 
   return (
     <div>
-      <Titulo titulo="Calendario">
-        <div data-tour="cal-vistas"><Segmentado<Vista>
-          valor={vista}
-          onChange={setVista}
-          opciones={[
-            { id: 'dia', label: <><CalendarDays size={15} /> Día a día</> },
-            { id: 'cuidadora', label: <><Users size={15} /> Semana por cuidadora</> },
-          ]}
-        /></div>
-      </Titulo>
+      <Titulo titulo="Calendario" />
 
       {/* Navegación: semana + selector de día */}
       <div className="mb-5 rounded-xl border border-linea bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,.04)]">
@@ -96,13 +93,27 @@ export function Semana({ param }: { param?: string }) {
               Hoy
             </Boton>
           )}
-          <div className="ml-auto flex gap-2">
-            <Boton variante="suave" chico onClick={copiarAnterior} title="Copiar la semana anterior">
-              <Copy size={15} /> <span className="hidden sm:inline">Copiar semana anterior</span>
+          <div data-tour="cal-vistas" className="ml-auto flex gap-2">
+            <Boton chico onClick={() => setModal({ fecha })}>
+              <Plus size={15} /> Asignar
             </Boton>
-            <Boton variante="suave" chico onClick={exportar} title="Descargar Excel">
-              <Download size={15} /> <span className="hidden sm:inline">Excel</span>
-            </Boton>
+            <MenuMas
+              items={[
+                vista === 'dia'
+                  ? { label: 'Ver semana por cuidadora', icon: <Users size={16} />, onClick: () => setVista('cuidadora') }
+                  : { label: 'Ver día a día', icon: <CalendarDays size={16} />, onClick: () => setVista('dia') },
+                ...(vista === 'dia' && db.personas.length
+                  ? [
+                      agrupar === 'piso'
+                        ? { label: 'Ordenar por cliente', icon: <Users size={16} />, onClick: () => setAgrupar('cliente') }
+                        : { label: 'Ordenar por piso', icon: <Building2 size={16} />, onClick: () => setAgrupar('piso') },
+                      { label: 'Buscar en el día', icon: <Search size={16} />, onClick: () => setMostrarBuscar(true) },
+                    ]
+                  : []),
+                { label: 'Copiar semana anterior', icon: <Copy size={16} />, onClick: copiarAnterior },
+                { label: 'Descargar Excel', icon: <Download size={16} />, onClick: exportar },
+              ]}
+            />
           </div>
         </div>
         <div data-tour="cal-dias" className="grid grid-cols-7 gap-1.5">
@@ -145,7 +156,7 @@ export function Semana({ param }: { param?: string }) {
       </div>
 
       {vista === 'dia' ? (
-        <VistaDia fecha={fecha} filtro={filtro} onFiltro={setFiltro} onModal={setModal} />
+        <VistaDia fecha={fecha} filtro={filtro} onFiltro={setFiltro} agrupar={agrupar} mostrarBuscar={mostrarBuscar} onCerrarBuscar={() => { setMostrarBuscar(false); setFiltro(""); }} onModal={setModal} />
       ) : (
         <VistaCuidadoras dias={dias} lunes={lunes} delaSemana={delaSemana} onModal={setModal} />
       )}
@@ -167,13 +178,10 @@ const leerAgrupar = (): Agrupar => {
   }
 };
 
-function VistaDia({ fecha, filtro, onFiltro, onModal }: { fecha: string; filtro: string; onFiltro: (v: string) => void; onModal: (i: AsignarInicial) => void }) {
+function VistaDia({ fecha, filtro, onFiltro, agrupar, mostrarBuscar, onCerrarBuscar, onModal }: {
+  fecha: string; filtro: string; onFiltro: (v: string) => void; agrupar: Agrupar; mostrarBuscar: boolean; onCerrarBuscar: () => void; onModal: (i: AsignarInicial) => void;
+}) {
   const { db } = useStore();
-  const [agrupar, setAgruparState] = useState<Agrupar>(leerAgrupar);
-  const setAgrupar = (v: Agrupar) => {
-    setAgruparState(v);
-    try { localStorage.setItem('acompana-agrupar', v); } catch { /* ignorar */ }
-  };
   const delDia = db.asignaciones.filter((a) => a.fecha === fecha);
   const turnos = db.turnos;
   const nombreCuidadora = (a: Asignacion) => db.cuidadoras.find((c) => c.id === a.cuidadoraId)?.nombre ?? '';
@@ -199,39 +207,18 @@ function VistaDia({ fecha, filtro, onFiltro, onModal }: { fecha: string; filtro:
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">{fmtLargo(fecha)}</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          {turnos.map((t) => (
-            <span key={t.id} className="inline-flex items-center gap-1.5 text-sm text-suave">
-              <TurnoIcono icono={t.icono} size={15} /> {t.nombre}
-              {requeridasTurno(db, t) > 0 && <Cobertura hay={delDia.filter((a) => a.turnoId === t.id && a.estado !== 'falto').length} req={requeridasTurno(db, t)} />}
-            </span>
-          ))}
-        </div>
-      </div>
+      <h2 className="mb-3 text-lg font-semibold">{fmtLargo(fecha)}</h2>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div data-tour="cal-buscar" className="relative min-w-52 flex-1">
+      {/* Buscador del día: solo aparece si se pide desde "Más" (o si se llegó buscando) */}
+      {mostrarBuscar && (
+        <div data-tour="cal-buscar" className="relative mb-3">
           <Search size={16} className="absolute top-1/2 left-3 -translate-y-1/2 text-suave" />
-          <input className={cx(inputCls, '!py-2 pl-9')} placeholder="Buscar residente, cliente o cuidadora…" value={filtro} onChange={(e) => onFiltro(e.target.value)} />
-          {filtro && (
-            <button onClick={() => onFiltro('')} className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-suave hover:bg-fondo" aria-label="Limpiar búsqueda">
-              <X size={15} />
-            </button>
-          )}
+          <input autoFocus className={cx(inputCls, '!py-2 pl-9')} placeholder="Buscar residente, cliente o cuidadora…" value={filtro} onChange={(e) => onFiltro(e.target.value)} />
+          <button onClick={onCerrarBuscar} className="absolute top-1/2 right-2 -translate-y-1/2 rounded p-1 text-suave hover:bg-fondo" aria-label="Cerrar búsqueda">
+            <X size={15} />
+          </button>
         </div>
-        {db.personas.length > 0 && (
-          <Segmentado<Agrupar>
-            valor={agrupar}
-            onChange={setAgrupar}
-            opciones={[
-              { id: 'piso', label: <><Building2 size={15} /> Por piso</> },
-              { id: 'cliente', label: <><Users size={15} /> Por cliente</> },
-            ]}
-          />
-        )}
-      </div>
+      )}
 
       <div data-tour="cal-tabla" className="overflow-hidden rounded-xl border border-linea bg-white shadow-[0_1px_2px_rgba(16,24,40,.04)]">
         {/* Encabezado: Residente | Día | Noche */}
@@ -283,12 +270,6 @@ function VistaDia({ fecha, filtro, onFiltro, onModal }: { fecha: string; filtro:
         )}
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-        <Leyenda />
-        <Boton chico variante="suave" onClick={() => onModal({ fecha })}>
-          <Plus size={15} /> Asignar turno
-        </Boton>
-      </div>
     </div>
   );
 }

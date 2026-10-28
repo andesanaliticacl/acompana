@@ -7,6 +7,8 @@ Gestión de turnos, pagos y caja para una empresa de cuidadoras de adultos mayor
 
 ## Qué hace
 
+Regla de 3: el menú tiene solo **Turnos** (Hoy · Calendario), **Personas** (Cuidadoras · Clientes) y **Dinero** (Pagos · Caja). Lo secundario va en "Más".
+
 | Pantalla | Para qué |
 |---|---|
 | **Hoy** | Quién cuida en cada turno hoy, marcar *Llegó / Tarde / No vino* con un toque, turnos sin cubrir de los próximos 7 días y total a pagar el domingo. |

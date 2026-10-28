@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { Check, MessageCircle, Phone, Plus, Search, Trash2, UserPlus } from 'lucide-react';
+import { Check, Plus, Search, Trash2, UserPlus } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Cliente, Persona } from '../lib/types';
-import { clp, edad, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
-import { linkWhatsApp, requeridasPersona } from '../lib/calculos';
-import { PALETA } from '../lib/colores';
-import { Boton, Campo, Card, Contador, Modal, Titulo, TurnoIcono, cx, inputCls, primerNombre } from '../components/ui';
+import { clp, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
+import { Boton, Campo, Card, Contador, MenuMas, Modal, Titulo, cx, inputCls } from '../components/ui';
 
 /** Clientes = apoderados. Cada uno tiene a cargo una o más personas cuidadas. */
 export function Clientes({ param }: { param?: string }) {
@@ -36,91 +34,57 @@ export function Clientes({ param }: { param?: string }) {
 
   return (
     <div>
-      <Titulo titulo="Clientes" sub={`${db.clientes.filter((c) => c.activo).length} clientes · ${clp(totalSemanal)} por semana`}>
-        <Boton onClick={() => setEditar({ id: uid(), nombre: '', telefono: '+56 9 ', cobroSemanal: 0, activo: true })}>
-          <UserPlus size={18} /> Nuevo cliente
-        </Boton>
-      </Titulo>
+      <Titulo titulo="Clientes" />
 
-      <div className="mb-5 flex flex-wrap items-center gap-3">
+      {/* Buscar + Nuevo (+ Más si hay inactivos) */}
+      <div className="mb-4 flex items-center gap-2">
         <div className="relative min-w-0 flex-1">
-          <Search size={18} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-suave" />
-          <input className={cx(inputCls, 'pl-10')} placeholder="Buscar cliente o residente" value={q} onChange={(e) => setQ(e.target.value)} />
+          <Search size={17} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-suave" />
+          <input className={cx(inputCls, '!py-2 pl-10')} placeholder="Buscar cliente o residente" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
+        <Boton chico onClick={() => setEditar({ id: uid(), nombre: '', telefono: '+56 9 ', cobroSemanal: 0, activo: true })}>
+          <UserPlus size={16} /> Nuevo
+        </Boton>
         {inactivos > 0 && (
-          <label className="flex items-center gap-2 text-sm text-suave">
-            <input type="checkbox" checked={verInactivos} onChange={(e) => setVerInactivos(e.target.checked)} /> Ver inactivos ({inactivos})
-          </label>
+          <MenuMas label="" items={[{ label: verInactivos ? 'Ocultar inactivos' : `Ver inactivos (${inactivos})`, onClick: () => setVerInactivos((x) => !x) }]} />
         )}
       </div>
 
-      <div data-tour="cli-lista" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {lista.map((c) => {
-          const pago = pagoSemana(c);
-          const tel = c.telefono.replace(/\D/g, '').length > 6;
-          return (
-            <Card key={c.id} onClick={() => setEditar(c)} className={cx('flex flex-col', !c.activo && 'opacity-60')}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-xs text-suave">Cliente</div>
-                  <h3 className="truncate font-semibold">{c.nombre}</h3>
-                </div>
-                {tel && (
-                  <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
-                    <a href={linkWhatsApp(c.telefono, `Hola ${primerNombre(c.nombre)}`)} target="_blank" rel="noreferrer" className="rounded-lg border border-linea p-2 text-suave hover:bg-fondo" aria-label="WhatsApp">
-                      <MessageCircle size={15} />
-                    </a>
-                    <a href={`tel:${c.telefono.replace(/\s/g, '')}`} className="rounded-lg border border-linea p-2 text-suave hover:bg-fondo" aria-label="Llamar">
-                      <Phone size={15} />
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-3 text-xs text-suave">Residente{personasDe(c).length === 1 ? "" : "s"}</div>
-              <ul className="mt-1 space-y-1.5">
-                {personasDe(c).map((p) => {
-                  const piso = db.pisos.find((x) => x.id === p.pisoId);
-                  return (
-                    <li key={p.id} className={cx('rounded-lg bg-fondo px-3 py-2', !p.activa && 'opacity-50')}>
-                      <div className="flex items-center justify-between gap-2 text-sm">
-                        <span className="truncate font-medium">{p.nombre}</span>
-                        <span className="shrink-0 text-xs text-suave">{[piso?.nombre, p.fechaNacimiento ? `${edad(p.fechaNacimiento)} años` : ''].filter(Boolean).join(' · ')}</span>
-                      </div>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {db.turnos.map((t) => {
-                          const n = requeridasPersona(p, t.id);
-                          if (!n) return null;
-                          return (
-                            <span key={t.id} className="inline-flex items-center gap-1 rounded px-1.5 text-[11px] font-medium" style={{ background: PALETA[t.color].bg, color: PALETA[t.color].fg }}>
-                              <TurnoIcono icono={t.icono} size={11} /> {t.nombre}{n > 1 ? ` ×${n}` : ''}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </li>
-                  );
-                })}
-                {personasDe(c).length === 0 && <li className="text-sm text-suave">Sin residentes registrados</li>}
-              </ul>
-
-              <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-                <span className="text-sm"><b className="tabular-nums">{clp(c.cobroSemanal)}</b> <span className="text-suave">/ semana</span></span>
+      {/* Lista simple: cliente, su residente y si pagó la semana */}
+      <Card tour="cli-lista" className="!p-0">
+        <ul className="divide-y divide-linea">
+          {lista.map((c) => {
+            const pago = pagoSemana(c);
+            const rs = personasDe(c);
+            const piso = (id?: string) => db.pisos.find((p) => p.id === id)?.nombre;
+            return (
+              <li key={c.id} className={cx('flex items-center gap-3 px-4 py-3', !c.activo && 'opacity-60')}>
+                <button onClick={() => setEditar(c)} className="min-w-0 flex-1 text-left">
+                  <span className="block truncate font-medium">{c.nombre}</span>
+                  <span className="block truncate text-sm text-suave">
+                    {rs.length ? rs.map((p) => [p.nombre, piso(p.pisoId)].filter(Boolean).join(' · ')).join(' / ') : 'Sin residente'}
+                  </span>
+                </button>
                 {pago ? (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-ok-50 px-2 py-1 text-xs font-medium text-ok">
-                    <Check size={13} strokeWidth={3} /> Pagó esta semana
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-ok-50 px-2 py-1 text-xs font-medium text-ok">
+                    <Check size={13} strokeWidth={3} /> Pagó
                   </span>
                 ) : (
-                  <Boton chico variante="suave" onClick={(e) => { e.stopPropagation(); registrarPago(c); }} disabled={!c.cobroSemanal}>
-                    <Plus size={14} /> Registrar pago
+                  <Boton chico variante="suave" className="shrink-0" onClick={() => registrarPago(c)} disabled={!c.cobroSemanal}>
+                    Cobrar
                   </Boton>
                 )}
-              </div>
-            </Card>
-          );
-        })}
-        {lista.length === 0 && <p className="text-suave">{db.clientes.length ? "No hay clientes que coincidan." : "Aún no hay clientes. Toca \"Nuevo cliente\" para agregar el primero con su residente."}</p>}
-      </div>
+              </li>
+            );
+          })}
+        </ul>
+        {lista.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-suave">
+            {db.clientes.length ? 'No hay clientes que coincidan.' : 'Aún no hay clientes. Toca "Nuevo" para agregar el primero con su residente.'}
+          </p>
+        )}
+      </Card>
+      <p className="mt-2 px-1 text-xs text-suave">Total por semana: {clp(totalSemanal)} · Toca un cliente para ver o editar su ficha.</p>
 
       {editar && <FormCliente inicial={editar} onClose={() => setEditar(null)} />}
     </div>

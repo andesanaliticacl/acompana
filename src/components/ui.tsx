@@ -1,5 +1,5 @@
-import { useEffect, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import { Clock, HeartHandshake, Minus, Moon, Plus, Star, Sun, Sunset, X } from 'lucide-react';
+import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { Clock, HeartHandshake, Minus, Moon, MoreHorizontal, Plus, Star, Sun, Sunset, X } from 'lucide-react';
 import { PALETA, type ColorKey } from '../lib/colores';
 import { ESTADOS, tonoRasgo, type Cuidadora, type Estado, type IconoTurno } from '../lib/types';
 
@@ -197,14 +197,64 @@ export function Logo({ compacto }: { compacto?: boolean }) {
   );
 }
 
+/** Encabezado de pantalla: el nombre lo muestran las pestañas de arriba; aquí va un subtítulo corto y la acción principal. */
 export function Titulo({ titulo, sub, children }: { titulo: string; sub?: ReactNode; children?: ReactNode }) {
+  if (!sub && !children) return <h1 className="sr-only">{titulo}</h1>;
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{titulo}</h1>
-        {sub && <p className="mt-0.5 text-sm text-suave">{sub}</p>}
-      </div>
-      {children && <div className="flex flex-wrap gap-2">{children}</div>}
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <h1 className="sr-only">{titulo}</h1>
+      {sub ? <p className="text-sm text-suave">{sub}</p> : <span />}
+      {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
+    </div>
+  );
+}
+
+export interface OpcionMas {
+  label: string;
+  icon?: ReactNode;
+  onClick: () => void;
+  activo?: boolean;
+}
+
+/** Botón "⋯ Más" que despliega acciones secundarias, para dejar a la vista solo lo importante. */
+export function MenuMas({ items, label = 'Más', alinear = 'derecha', haciaArriba }: { items: OpcionMas[]; label?: string; alinear?: 'derecha' | 'izquierda'; haciaArriba?: boolean }) {
+  const [abierto, setAbierto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!abierto) return;
+    const cerrar = (e: MouseEvent) => !ref.current?.contains(e.target as Node) && setAbierto(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setAbierto(false);
+    document.addEventListener('mousedown', cerrar);
+    window.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', cerrar);
+      window.removeEventListener('keydown', esc);
+    };
+  }, [abierto]);
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setAbierto((x) => !x)}
+        className={cx('inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition', abierto ? 'border-primario bg-primario-50 text-primario' : 'border-linea bg-white text-suave hover:bg-fondo')}
+        aria-expanded={abierto}
+      >
+        <MoreHorizontal size={16} /> {label}
+      </button>
+      {abierto && (
+        <div className={cx('anim-subir absolute z-40 min-w-56 overflow-hidden rounded-xl border border-linea bg-white py-1 shadow-xl', alinear === 'derecha' ? 'right-0' : 'left-0', haciaArriba ? 'bottom-full mb-1.5' : 'mt-1.5')}>
+          {items.map((it) => (
+            <button
+              key={it.label}
+              type="button"
+              onClick={() => { setAbierto(false); it.onClick(); }}
+              className={cx('flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm hover:bg-fondo', it.activo && 'font-medium text-primario')}
+            >
+              <span className="text-suave">{it.icon}</span> {it.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
