@@ -1,16 +1,18 @@
-import { Plus, RotateCcw, Trash2 } from 'lucide-react';
+import { Moon, Plus, RotateCcw, Sun, SunMoon, Trash2 } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { IconoTurno, Turno } from '../lib/types';
 import { DIAS_CORTOS, duracion, fmtHoras, uid } from '../lib/fechas';
 import { COLORES, PALETA } from '../lib/colores';
 import { requeridasTurno } from '../lib/calculos';
-import { Boton, Campo, Card, OPCIONES_ICONO, Titulo, TurnoIcono, cx, inputCls } from '../components/ui';
+import { Boton, Campo, Card, OPCIONES_ICONO, Segmentado, Titulo, TurnoIcono, cx, inputCls } from '../components/ui';
+import { useTema, type Tema } from '../lib/tema';
 
 
 const DIAS_LARGOS =['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 export function Ajustes() {
   const { db, upsert, remove, setAjustes, reiniciar } = useStore();
+  const { tema, setTema } = useTema();
 
   const editarTurno = (t: Turno, p: Partial<Turno>) => upsert('turnos', { ...t, ...p });
   const usados = (id: string) => db.asignaciones.filter((a) => a.turnoId === id).length;
@@ -19,10 +21,23 @@ export function Ajustes() {
     <div className="max-w-3xl">
       <Titulo titulo="Ajustes" />
 
-      <Card className="mb-4">
+      <Card className="mb-4 space-y-4">
         <Campo label="Tu nombre (para el saludo de inicio)">
           <input className={inputCls} value={db.ajustes.nombreDuena} onChange={(e) => setAjustes({ nombreDuena: e.target.value })} placeholder="Tu nombre" />
         </Campo>
+        <div>
+          <span className="mb-1.5 block text-sm font-medium">Tema</span>
+          <Segmentado<Tema>
+            valor={tema}
+            onChange={setTema}
+            opciones={[
+              { id: 'claro', label: <><Sun size={15} /> Claro</> },
+              { id: 'oscuro', label: <><Moon size={15} /> Oscuro</> },
+              { id: 'auto', label: <><SunMoon size={15} /> Automático</> },
+            ]}
+          />
+          <span className="mt-1 block text-xs text-suave">Automático usa el mismo modo que tu teléfono o computador.</span>
+        </div>
       </Card>
 
       <Card tour="ajustes-turnos" className="mb-4 !p-0">

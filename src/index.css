@@ -1,38 +1,180 @@
 @import "tailwindcss";
 
-@theme {
+/*
+ * Colores con dos versiones (claro / oscuro). Las clases de Tailwind (bg-fondo, text-tinta…)
+ * apuntan a variables CSS, así que cambiar el tema es cambiar el atributo data-theme del <html>.
+ */
+@theme inline {
   --font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  /* Base neutra */
-  --color-fondo: #f6f7f9;
-  --color-tinta: #1f2937;
-  --color-suave: #6b7280;
-  --color-linea: #e5e7eb;
+  --color-fondo: var(--c-fondo);
+  --color-superficie: var(--c-superficie);
+  --color-hover: var(--c-hover);
+  --color-segmento: var(--c-segmento);
+  --color-tinta: var(--c-tinta);
+  --color-tinta-2: var(--c-tinta-2);
+  --color-suave: var(--c-suave);
+  --color-apagado: var(--c-apagado);
+  --color-linea: var(--c-linea);
+  --color-borde: var(--c-borde);
+  --color-velo: var(--c-velo);
+  --color-sobre: var(--c-sobre);
+  --color-estrella: var(--c-estrella);
 
-  /* Marca: verde azulado sobrio (salud, confianza) */
-  --color-primario: #0f6e6a;
-  --color-primario-600: #0c5a57;
-  --color-primario-200: #a7d8d3;
-  --color-primario-50: #eef7f6;
+  --color-primario: var(--c-primario);
+  --color-primario-600: var(--c-primario-600);
+  --color-primario-200: var(--c-primario-200);
+  --color-primario-50: var(--c-primario-50);
 
-  /* Estados */
-  --color-ok: #15803d;
-  --color-ok-50: #effaf3;
-  --color-aviso: #a16207;
-  --color-aviso-50: #fdf8eb;
-  --color-alerta: #b42318;
-  --color-alerta-200: #f5c2bd;
-  --color-alerta-50: #fdf3f2;
-  --color-info: #3b4a9c;
-  --color-info-50: #f1f3fb;
+  --color-ok: var(--c-ok);
+  --color-ok-50: var(--c-ok-50);
+  --color-aviso: var(--c-aviso);
+  --color-aviso-50: var(--c-aviso-50);
+  --color-alerta: var(--c-alerta);
+  --color-alerta-200: var(--c-alerta-200);
+  --color-alerta-50: var(--c-alerta-50);
+  --color-alerta-100: var(--c-alerta-100);
+  --color-info: var(--c-info);
+  --color-info-50: var(--c-info-50);
 }
 
-html, body { background: var(--color-fondo); color: var(--color-tinta); }
+/* ───── Tema claro ───── */
+:root {
+  color-scheme: light;
+  --c-fondo: #f6f7f9;
+  --c-superficie: #ffffff;
+  --c-hover: #f3f4f6;
+  --c-segmento: #eceef1;
+  --c-tinta: #1f2937;
+  --c-tinta-2: #4b5563;
+  --c-suave: #6b7280;
+  --c-apagado: #c4c9d1;
+  --c-linea: #e5e7eb;
+  --c-borde: #d1d5db;
+  --c-velo: #111827;
+  --c-sobre: #ffffff;
+  --c-estrella: #e8a317;
+
+  --c-primario: #0f6e6a;
+  --c-primario-600: #0c5a57;
+  --c-primario-200: #a7d8d3;
+  --c-primario-50: #eef7f6;
+
+  --c-ok: #15803d;
+  --c-ok-50: #effaf3;
+  --c-aviso: #a16207;
+  --c-aviso-50: #fdf8eb;
+  --c-alerta: #b42318;
+  --c-alerta-200: #f5c2bd;
+  --c-alerta-100: #fbe9e7;
+  --c-alerta-50: #fdf3f2;
+  --c-info: #3b4a9c;
+  --c-info-50: #f1f3fb;
+
+  /* Colores de turnos y cuidadoras: fondo / texto / punto */
+  --p-azul-bg: #edf3fb;    --p-azul-fg: #1e4e8c;    --p-azul-dot: #7fa6d9;
+  --p-verde-bg: #ecf6f1;   --p-verde-fg: #1d6b4a;   --p-verde-dot: #7cc0a0;
+  --p-violeta-bg: #f1effa; --p-violeta-fg: #4b3f94; --p-violeta-dot: #a99ee0;
+  --p-ambar-bg: #fbf5e9;   --p-ambar-fg: #8a5a0b;   --p-ambar-dot: #e0b56a;
+  --p-teja-bg: #fbf0ec;    --p-teja-fg: #93412a;    --p-teja-dot: #e2a08a;
+  --p-gris-bg: #f1f3f5;    --p-gris-fg: #3f4b5a;    --p-gris-dot: #a3adba;
+
+  /* Rasgos de cuidadoras */
+  --r-bueno-bg: #effaf3; --r-bueno-fg: #166534; --r-bueno-bd: #bbe5c9;
+  --r-ojo-bg: #fdf8eb;   --r-ojo-fg: #92400e;   --r-ojo-bd: #f0d9a6;
+  --r-neutro-bg: #f3f4f6; --r-neutro-fg: #374151; --r-neutro-bd: #e5e7eb;
+}
+
+/* ───── Tema oscuro ───── */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --c-fondo: #0e1014;
+  --c-superficie: #171a20;
+  --c-hover: #1f232a;
+  --c-segmento: #1d2128;
+  --c-tinta: #e8eaed;
+  --c-tinta-2: #c3c8cf;
+  --c-suave: #969da8;
+  --c-apagado: #4a505a;
+  --c-linea: #262b33;
+  --c-borde: #363c46;
+  --c-velo: #000000;
+  --c-sobre: #04201e;
+  --c-estrella: #f2b84b;
+
+  --c-primario: #4cc2b5;
+  --c-primario-600: #6fd3c7;
+  --c-primario-200: #23514c;
+  --c-primario-50: #12302d;
+
+  --c-ok: #5fd08c;
+  --c-ok-50: #11281b;
+  --c-aviso: #e7b54f;
+  --c-aviso-50: #2a2210;
+  --c-alerta: #f2837a;
+  --c-alerta-200: #5b2722;
+  --c-alerta-100: #3a1916;
+  --c-alerta-50: #2a1513;
+  --c-info: #a3aef2;
+  --c-info-50: #1b1f38;
+
+  --p-azul-bg: #16243a;    --p-azul-fg: #a9c6f2;    --p-azul-dot: #5b84c4;
+  --p-verde-bg: #142a21;   --p-verde-fg: #9fdcbe;   --p-verde-dot: #4d9c78;
+  --p-violeta-bg: #211d3a; --p-violeta-fg: #c5bdf5; --p-violeta-dot: #8274d0;
+  --p-ambar-bg: #2b2212;   --p-ambar-fg: #f0cd86;   --p-ambar-dot: #c49a45;
+  --p-teja-bg: #2e1c16;    --p-teja-fg: #f2b7a3;    --p-teja-dot: #c97b62;
+  --p-gris-bg: #20252c;    --p-gris-fg: #c6ced8;    --p-gris-dot: #7d8796;
+
+  --r-bueno-bg: #11281b; --r-bueno-fg: #8fe0ae; --r-bueno-bd: #22553a;
+  --r-ojo-bg: #2a2210;   --r-ojo-fg: #f0c878;   --r-ojo-bd: #5a4718;
+  --r-neutro-bg: #1f232a; --r-neutro-fg: #c3c8cf; --r-neutro-bd: #333944;
+}
+
+html, body { background: var(--c-fondo); color: var(--c-tinta); }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
 body { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; font-feature-settings: "cv11", "ss01"; }
+/* Sin el destello gris al tocar en el celular */
+* { -webkit-tap-highlight-color: transparent; }
+/* Cambio de tema suave */
+body, header, aside, nav, main { transition: background-color .25s ease, border-color .25s ease, color .25s ease; }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 
-@keyframes subir { from { transform: translateY(16px); opacity: 0 } to { transform: none; opacity: 1 } }
-.anim-subir { animation: subir .18s ease-out; }
+/* ───── Animaciones (curvas tipo app nativa) ───── */
+:root {
+  --ease-app: cubic-bezier(.2, .8, .2, 1);
+  --ease-hoja: cubic-bezier(.32, .72, 0, 1);
+}
+@keyframes subir { from { transform: translateY(14px); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes entrar { from { transform: translateY(8px); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes aparecer { from { opacity: 0 } to { opacity: 1 } }
+@keyframes desaparecer { from { opacity: 1 } to { opacity: 0 } }
+@keyframes hoja-entra { from { transform: translateY(100%) } to { transform: translateY(0) } }
+@keyframes hoja-sale { from { transform: translateY(0) } to { transform: translateY(100%) } }
+@keyframes ventana-entra { from { transform: scale(.96) translateY(8px); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes ventana-sale { from { transform: none; opacity: 1 } to { transform: scale(.97) translateY(6px); opacity: 0 } }
+@keyframes menu-abre { from { transform: scale(.95) translateY(-4px); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes pop { 0% { transform: scale(1) } 40% { transform: scale(.86) } 100% { transform: scale(1) } }
+
+.anim-subir { animation: subir .26s var(--ease-app) backwards; }
+/* "backwards": al terminar no deja transform aplicado (si lo dejara, las ventanas fijas de adentro se ubicarían mal) */
+.anim-entrar { animation: entrar .28s var(--ease-app) backwards; }
+.anim-aparecer { animation: aparecer .22s ease-out backwards; }
+.anim-desaparecer { animation: desaparecer .2s ease-in both; }
+.anim-menu { animation: menu-abre .16s var(--ease-app) backwards; }
+.anim-pop { animation: pop .32s var(--ease-app); }
+
+/* Ventana: en celular es una hoja que sube desde abajo; en computador aparece al centro */
+.hoja-entra { animation: hoja-entra .38s var(--ease-hoja) both; }
+.hoja-sale { animation: hoja-sale .24s ease-in both; }
+@media (min-width: 640px) {
+  .hoja-entra { animation: ventana-entra .24s var(--ease-app) both; }
+  .hoja-sale { animation: ventana-sale .18s ease-in both; }
+}
+
+/* Quien prefiere menos movimiento (ajuste del teléfono) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

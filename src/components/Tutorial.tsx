@@ -139,18 +139,18 @@ export function Tutorial({ paso, setPaso, ir, onClose }: { paso: number; setPaso
           }}
         />
       ) : (
-        <div className="pointer-events-none fixed inset-0 z-[60] bg-[#111827]/45" />
+        <div className="pointer-events-none fixed inset-0 z-[60] bg-velo/50" />
       )}
 
       {/* Barra superior con el botón para cerrar */}
       <div className="fixed inset-x-0 top-0 z-[62] flex justify-center p-2">
-        <div className="flex items-center gap-3 rounded-full bg-tinta py-1.5 pr-1.5 pl-4 text-sm text-white shadow-lg">
+        <div className="flex items-center gap-3 rounded-full bg-primario py-1.5 pr-1.5 pl-4 text-sm text-sobre shadow-lg">
           <GraduationCap size={16} />
           <span className="whitespace-nowrap">
             <span className="hidden sm:inline">Modo tutorial · Paso {paso + 1} de {PASOS.length}</span>
             <span className="sm:hidden">Tutorial · {paso + 1}/{PASOS.length}</span>
           </span>
-          <button onClick={onClose} className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 font-medium whitespace-nowrap hover:bg-white/25">
+          <button onClick={onClose} className="flex items-center gap-1 rounded-full bg-sobre/15 px-3 py-1 font-medium whitespace-nowrap hover:bg-sobre/25">
             <X size={14} /> Cerrar tutorial
           </button>
         </div>
@@ -159,7 +159,7 @@ export function Tutorial({ paso, setPaso, ir, onClose }: { paso: number; setPaso
       {/* Tarjeta con la explicación */}
       <div
         className={cx(
-          'anim-subir fixed inset-x-3 z-[62] mx-auto max-w-md rounded-2xl bg-white p-5 shadow-2xl sm:inset-x-auto sm:right-6',
+          'anim-subir fixed inset-x-3 z-[62] mx-auto max-w-md rounded-2xl bg-superficie p-5 shadow-2xl sm:inset-x-auto sm:right-6',
           arriba ? 'top-16' : 'bottom-24 lg:bottom-6',
         )}
         key={paso}
@@ -170,7 +170,7 @@ export function Tutorial({ paso, setPaso, ir, onClose }: { paso: number; setPaso
           ))}
         </div>
         <h3 className="text-lg font-semibold">{p.titulo}</h3>
-        <p className="mt-1.5 text-sm leading-relaxed text-[#4b5563]">{p.texto}</p>
+        <p className="mt-1.5 text-sm leading-relaxed text-tinta-2">{p.texto}</p>
         <div className="mt-4 flex items-center justify-between gap-2">
           <Boton chico variante="fantasma" onClick={() => setPaso(paso - 1)} disabled={paso === 0}>
             <ChevronLeft size={16} /> Anterior

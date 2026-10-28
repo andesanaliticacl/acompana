@@ -102,10 +102,10 @@ export const RASGOS: { nombre: string; tono: 'bueno' | 'neutro' | 'ojo' }[] = [
 export const tonoRasgo = (r: string) => RASGOS.find((x) => x.nombre === r)?.tono ?? 'neutro';
 
 export const ESTADOS: Record<Estado, { label: string; corto: string; bg: string; fg: string }> = {
-  programado: { label: 'Programado', corto: 'Pendiente', bg: '#f1f3f5', fg: '#4b5563' },
-  asistio: { label: 'Asistió', corto: 'Llegó', bg: '#effaf3', fg: '#15803d' },
-  atraso: { label: 'Llegó tarde', corto: 'Tarde', bg: '#fdf8eb', fg: '#a16207' },
-  falto: { label: 'Faltó', corto: 'No vino', bg: '#fdf3f2', fg: '#b42318' },
+  programado: { label: 'Programado', corto: 'Pendiente', bg: 'var(--c-hover)', fg: 'var(--c-tinta-2)' },
+  asistio: { label: 'Asistió', corto: 'Llegó', bg: 'var(--c-ok-50)', fg: 'var(--c-ok)' },
+  atraso: { label: 'Llegó tarde', corto: 'Tarde', bg: 'var(--c-aviso-50)', fg: 'var(--c-aviso)' },
+  falto: { label: 'Faltó', corto: 'No vino', bg: 'var(--c-alerta-50)', fg: 'var(--c-alerta)' },
 };
 
 /** Cliente = apoderado que contrata y paga el servicio. */

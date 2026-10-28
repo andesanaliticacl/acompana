@@ -7,6 +7,7 @@ import { clp, fmtDia, fmtHora, fmtLargo, hoy, lunesDe } from '../lib/fechas';
 import { horario, huecos, personaDe, pisoDe, requeridasTurno, resumenSemana } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
 import { Avatar, Boton, Card, TurnoIcono, cx } from '../components/ui';
+import { vibrar } from '../lib/tacto';
 import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
 import type { Tab } from '../App';
 
@@ -56,7 +57,7 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
             ].map((p, i) => (
               <li key={i}>
                 <button onClick={() => ir(p.tab)} className="flex w-full items-center gap-3 rounded-lg border border-linea px-3 py-2.5 text-left text-sm hover:bg-fondo">
-                  <span className={cx('grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold', p.hecho ? 'bg-ok text-white' : 'bg-fondo text-suave')}>
+                  <span className={cx('grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold', p.hecho ? 'bg-ok text-sobre' : 'bg-fondo text-suave')}>
                     {p.hecho ? <CheckCircle2 size={14} /> : i + 1}
                   </span>
                   <span className={cx('flex-1', p.hecho && 'text-suave line-through')}>{p.texto}</span>
@@ -69,7 +70,7 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
       )}
 
       {/* 1. Resumen en una sola tarjeta */}
-      <div data-tour="hoy-resumen" className="mb-4 grid grid-cols-2 divide-x divide-linea overflow-hidden rounded-xl border border-linea bg-white">
+      <div data-tour="hoy-resumen" className="mb-4 grid grid-cols-2 divide-x divide-linea overflow-hidden rounded-xl border border-linea bg-superficie">
         <button onClick={() => ir('pagos')} className="p-3.5 text-left hover:bg-fondo sm:p-4">
           <div className="flex items-center gap-1.5 text-xs text-suave"><Wallet size={14} /> Pago del domingo</div>
           <div className="mt-0.5 text-lg font-semibold tabular-nums sm:text-xl">{clp(aPagar)}</div>
@@ -119,7 +120,7 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
         <div className="border-b border-linea px-4 py-3 font-semibold">Turnos de hoy</div>
         <div className="divide-y divide-linea">
           {db.turnos.map((t) => (
-            <FilaTurno key={t.id} fecha={h} turnoId={t.id} onEditar={setModal} onEstado={(a, estado) => upsert('asignaciones', { ...a, estado })} conAsistencia />
+            <FilaTurno key={t.id} fecha={h} turnoId={t.id} onEditar={setModal} onEstado={(a, estado) => { vibrar(); upsert('asignaciones', { ...a, estado }); }} conAsistencia />
           ))}
         </div>
       </Card>
@@ -163,7 +164,7 @@ function FilaTurno({
         {lista.length === 0 && requeridasTurno(db, t) > 0 && (
           <button
             onClick={() => onEditar({ fecha, turnoId })}
-            className="flex w-full items-center gap-2 rounded-lg border border-dashed border-alerta-200 bg-alerta-50 px-3 py-2 text-sm font-medium text-alerta hover:bg-[#fbe9e7]"
+            className="flex w-full items-center gap-2 rounded-lg border border-dashed border-alerta-200 bg-alerta-50 px-3 py-2 text-sm font-medium text-alerta hover:bg-alerta-100"
           >
             <AlertTriangle size={15} /> Sin cubrir · asignar cuidadoras
           </button>
@@ -189,12 +190,12 @@ function FilaTurno({
                 </div>
               </button>
               {conAsistencia && onEstado ? (
-                <div className="grid shrink-0 grid-cols-3 overflow-hidden rounded-lg border border-[#d1d5db] sm:w-60">
+                <div className="grid shrink-0 grid-cols-3 overflow-hidden rounded-lg border border-borde sm:w-60">
                   {(['asistio', 'atraso', 'falto'] as Estado[]).map((e, i) => (
                     <button
                       key={e}
                       onClick={() => onEstado(a, a.estado === e ? 'programado' : e)}
-                      className={cx('py-2.5 text-sm font-medium transition sm:py-1.5 sm:text-xs', i > 0 && 'border-l border-[#d1d5db]', a.estado !== e && 'bg-white text-suave hover:bg-fondo')}
+                      className={cx('py-2.5 text-sm font-medium transition sm:py-1.5 sm:text-xs', i > 0 && 'border-l border-borde', a.estado !== e && 'bg-superficie text-suave hover:bg-fondo')}
                       style={a.estado === e ? { background: ESTADOS[e].bg, color: ESTADOS[e].fg } : undefined}
                     >
                       {ESTADOS[e].corto}

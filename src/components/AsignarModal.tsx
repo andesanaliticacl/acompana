@@ -6,6 +6,7 @@ import { ESTADOS } from '../lib/types';
 import { fmtHoras, fmtLargo, uid } from '../lib/fechas';
 import { horario, horasDe, linkWhatsApp, personasActivas, requeridasPersona, requeridasTurno, turnoSugerido } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
+import { vibrar } from '../lib/tacto';
 import { Avatar, Boton, Campo, Modal, Segmentado, TurnoIcono, cx, inputCls, primerNombre } from './ui';
 
 export interface AsignarInicial {
@@ -73,6 +74,7 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
   };
 
   const guardar = () => {
+    vibrar(12);
     if (existente) upsert('asignaciones', { ...f, cuidadoraId: elegidas[0] });
     else upsertMuchos('asignaciones', elegidas.map((cid) => ({ ...f, id: uid(), cuidadoraId: cid })));
     onClose();
@@ -168,7 +170,7 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
                   onClick={() => toggle(c.id)}
                   className={cx(
                     'flex items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-45',
-                    on ? 'border-primario bg-primario-50' : 'border-[#d1d5db] bg-white hover:bg-fondo',
+                    on ? 'border-primario bg-primario-50' : 'border-borde bg-superficie hover:bg-fondo',
                   )}
                 >
                   <Avatar c={c} size={30} />
@@ -176,7 +178,7 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
                     <span className="block truncate font-medium">{c.nombre}</span>
                     <span className="block text-xs text-suave">{ocu ? `Ya está en ${tOcu?.nombre.toLowerCase() ?? 'otro turno'}` : `${c.experiencia} años de exp.`}</span>
                   </span>
-                  <span className={cx('grid size-5 shrink-0 place-items-center rounded border', on ? 'border-primario bg-primario text-white' : 'border-[#d1d5db]')}>
+                  <span className={cx('grid size-5 shrink-0 place-items-center rounded border', on ? 'border-primario bg-primario text-sobre' : 'border-borde')}>
                     {on && <Check size={13} strokeWidth={3} />}
                   </span>
                 </button>
@@ -206,7 +208,7 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
           </div>
         )}
 
-        <div className="sticky bottom-0 -mx-5 -mb-6 flex flex-wrap items-center gap-2 border-t border-linea bg-white px-5 py-3">
+        <div className="sticky -bottom-6 z-10 -mx-5 -mb-6 flex flex-wrap items-center gap-2 border-t border-linea bg-superficie px-5 py-3">
           <Boton onClick={guardar} disabled={!elegidas.length} className="flex-1">
             {existente ? 'Guardar cambios' : elegidas.length > 1 ? `Asignar ${elegidas.length} cuidadoras` : 'Asignar'}
           </Boton>

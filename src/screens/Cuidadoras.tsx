@@ -145,7 +145,7 @@ function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; o
         {mas ? 'Ver menos' : 'Ver más detalles'} <ChevronRight size={15} className={cx('transition', mas && 'rotate-90')} />
       </button>
       {mas && (
-        <div className="mt-3 space-y-4 border-t border-linea pt-4">
+        <div className="anim-entrar mt-3 space-y-4 border-t border-linea pt-4">
           {c.descripcion && <p className="text-sm leading-relaxed">{c.descripcion}</p>}
           {c.notas && (
             <div className="rounded-lg bg-aviso-50 p-3 text-sm text-aviso">
@@ -171,7 +171,7 @@ function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; o
       )}
 
       {/* Acciones */}
-      <div className="sticky bottom-0 -mx-5 -mb-6 mt-5 flex gap-2 border-t border-linea bg-white px-5 py-3">
+      <div className="sticky -bottom-6 z-10 -mx-5 -mb-6 mt-5 flex gap-2 border-t border-linea bg-superficie px-5 py-3">
         <a href={linkWhatsApp(c.telefono, `Hola ${primerNombre(c.nombre)}`)} target="_blank" rel="noreferrer" className="flex-1">
           <Boton variante="suave" className="w-full">
             <MessageCircle size={16} /> WhatsApp
@@ -251,7 +251,7 @@ function FormCuidadora({ inicial, onClose, onGuardada }: { inicial: Cuidadora; o
         <label className="flex items-center gap-2 font-semibold">
           <input type="checkbox" className="size-5" checked={f.activa} onChange={(e) => set({ activa: e.target.checked })} /> Activa en el equipo
         </label>
-        <div className="sticky bottom-0 -mx-5 -mb-6 border-t border-linea bg-white px-5 py-3">
+        <div className="sticky -bottom-6 z-10 -mx-5 -mb-6 border-t border-linea bg-superficie px-5 py-3">
         <Boton
           className="w-full"
           disabled={!f.nombre.trim()}

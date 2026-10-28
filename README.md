@@ -19,6 +19,8 @@ Regla de 3: el menú tiene solo **Turnos** (Hoy · Calendario), **Personas** (Cu
 | **Caja** | Ingresos (familias/clientes) y gastos por semana o mes. Los pagos a cuidadoras entran solos como gasto. "Te queda" = ganancia. |
 | **Ajustes** | Nombre, horarios de turnos, pisos, reiniciar datos de ejemplo. |
 | **Tutorial** | Botón "Tutorial" en el menú: recorrido guiado que ilumina cada parte y explica para qué sirve. Se cierra con "Cerrar tutorial". |
+| **Tema** | Claro, oscuro o automático (sigue al teléfono). En "Más" → Modo oscuro/claro, o en Ajustes. |
+| **Celular** | Ventanas tipo hoja que se cierran deslizando hacia abajo, transiciones suaves, vibración al marcar asistencia o pagar, instalable en la pantalla de inicio. |
 
 ## Desarrollo
 

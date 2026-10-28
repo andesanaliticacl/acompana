@@ -3,12 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0f6e6a" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="description" content="Turnos, cuidadoras, clientes y pagos en un solo lugar." />
+    <!-- Se puede instalar en la pantalla de inicio del celular y abre como app -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Acompaña" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <title>Acompaña</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <!-- Aplica el tema guardado antes de dibujar, para que el modo oscuro no "parpadee" en blanco -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('acompana-tema');
+          var oscuro = t === 'oscuro' || (t !== 'claro' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = oscuro ? 'dark' : 'light';
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', oscuro ? '#0e1014' : '#ffffff');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -92,8 +92,8 @@ export function Buscador({ onClose, ir }: { onClose: () => void; ir: (t: Tab, p?
   const grupos = (['Cuidadoras', 'Residentes', 'Clientes'] as const).map((g) => ({ g, rs: resultados.filter((r) => r.grupo === g) })).filter((x) => x.rs.length);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-[#111827]/40 p-3 pt-[8vh]" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="anim-subir w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-velo/50 p-3 pt-[8vh]" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} className="anim-subir w-full max-w-xl overflow-hidden rounded-2xl bg-superficie shadow-2xl">
         <div className="flex items-center gap-2 border-b border-linea px-4">
           <Search size={18} className="text-suave" />
           <input

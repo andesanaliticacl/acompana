@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarClock, GraduationCap, Search, Settings, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { CalendarClock, GraduationCap, Moon, Search, Settings, Sun, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { Hoy } from './screens/Hoy';
 import { Semana } from './screens/Semana';
 import { Cuidadoras } from './screens/Cuidadoras';
@@ -10,6 +10,8 @@ import { Ajustes } from './screens/Ajustes';
 import { Buscador } from './components/Buscador';
 import { Tutorial } from './components/Tutorial';
 import { Logo, MenuMas, cx } from './components/ui';
+import { useTema } from './lib/tema';
+import { vibrar } from './lib/tacto';
 
 export type Tab = 'hoy' | 'semana' | 'cuidadoras' | 'clientes' | 'pagos' | 'caja' | 'ajustes';
 
@@ -34,6 +36,7 @@ export default function App() {
   const [buscar, setBuscar] = useState(false);
   const [tour, setTour] = useState<number | null>(null);
   const { tab, param } = ruta;
+  const { oscuro, setTema } = useTema();
   const seccion = SECCIONES.find((s) => s.tabs.some((t) => t.id === tab));
 
   const iniciarTutorial = () => {
@@ -65,6 +68,7 @@ export default function App() {
 
   const opcionesMas = [
     { label: 'Tutorial', icon: <GraduationCap size={16} />, onClick: iniciarTutorial, activo: tour !== null },
+    { label: oscuro ? 'Modo claro' : 'Modo oscuro', icon: oscuro ? <Sun size={16} /> : <Moon size={16} />, onClick: () => setTema(oscuro ? 'claro' : 'oscuro') },
     { label: 'Ajustes', icon: <Settings size={16} />, onClick: () => ir('ajustes'), activo: tab === 'ajustes' },
   ];
 
@@ -74,7 +78,7 @@ export default function App() {
   return (
     <div className="min-h-screen lg:flex">
       {/* Barra lateral (computador): 3 secciones */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-linea bg-white lg:flex">
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-linea bg-superficie lg:flex">
         <div className="px-5 py-5">
           <Logo />
         </div>
@@ -85,7 +89,7 @@ export default function App() {
               onClick={() => ir(s.tabs[0].id)}
               className={cx(
                 'flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left font-medium transition',
-                seccion?.id === s.id ? 'bg-primario-50 text-primario' : 'text-[#4b5563] hover:bg-fondo hover:text-tinta',
+                seccion?.id === s.id ? 'bg-primario-50 text-primario' : 'text-tinta-2 hover:bg-fondo hover:text-tinta',
               )}
             >
               <s.icon size={20} strokeWidth={1.9} /> {s.label}
@@ -106,7 +110,7 @@ export default function App() {
       </aside>
 
       {/* Encabezado (celular): logo, buscar y Más */}
-      <header className="sticky top-0 z-30 border-b border-linea bg-white/95 backdrop-blur lg:hidden">
+      <header className="sticky top-0 z-30 border-b border-linea bg-superficie/95 pt-[env(safe-area-inset-top)] backdrop-blur lg:hidden">
         <div className="flex items-center justify-between gap-2 px-4 py-2.5">
           <Logo />
           <div className="flex items-center gap-1.5">
@@ -120,17 +124,23 @@ export default function App() {
 
       <main className="min-w-0 flex-1 px-4 pt-4 pb-28 sm:px-6 lg:px-10 lg:py-8">
         <div className="mx-auto max-w-5xl">
-          {/* Pestañas de la sección (2 por sección) */}
+          {/* Pestañas de la sección (2 por sección) con indicador que se desliza */}
           {seccion ? (
-            <div className="mb-5 flex gap-1 rounded-xl bg-[#eceef1] p-1">
+            <div className="relative mb-5 grid rounded-xl bg-segmento p-1 sm:max-w-sm" style={{ gridTemplateColumns: `repeat(${seccion.tabs.length}, minmax(0, 1fr))` }}>
+              <span
+                aria-hidden
+                className="absolute inset-y-1 left-1 rounded-lg bg-superficie shadow-sm transition-transform duration-300"
+                style={{
+                  width: `calc((100% - 0.5rem) / ${seccion.tabs.length})`,
+                  transform: `translateX(${Math.max(0, seccion.tabs.findIndex((t) => t.id === tab)) * 100}%)`,
+                  transitionTimingFunction: 'var(--ease-app)',
+                }}
+              />
               {seccion.tabs.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => ir(t.id)}
-                  className={cx(
-                    'flex-1 rounded-lg py-2 text-[15px] font-medium transition sm:flex-none sm:px-6',
-                    tab === t.id ? 'bg-white text-tinta shadow-sm' : 'text-suave hover:text-tinta',
-                  )}
+                  className={cx('relative z-10 rounded-lg py-2 text-[15px] font-medium transition-colors duration-200', tab === t.id ? 'text-tinta' : 'text-suave hover:text-tinta')}
                 >
                   {t.label}
                 </button>
@@ -140,25 +150,32 @@ export default function App() {
             <h1 className="mb-5 text-2xl font-semibold tracking-tight">Ajustes</h1>
           )}
 
-          {tab === 'hoy' && <Hoy ir={ir} />}
-          {tab === 'semana' && <Semana key={k} param={param} />}
-          {tab === 'cuidadoras' && <Cuidadoras key={k} param={param} />}
-          {tab === 'clientes' && <Clientes key={k} param={param} />}
-          {tab === 'pagos' && <Pagos />}
-          {tab === 'caja' && <Caja />}
-          {tab === 'ajustes' && <Ajustes />}
+          {/* Cada cambio de pantalla entra con una transición suave */}
+          <div key={tab} className="anim-entrar">
+            {tab === 'hoy' && <Hoy ir={ir} />}
+            {tab === 'semana' && <Semana key={k} param={param} />}
+            {tab === 'cuidadoras' && <Cuidadoras key={k} param={param} />}
+            {tab === 'clientes' && <Clientes key={k} param={param} />}
+            {tab === 'pagos' && <Pagos />}
+            {tab === 'caja' && <Caja />}
+            {tab === 'ajustes' && <Ajustes />}
+          </div>
         </div>
       </main>
 
       {/* Navegación inferior (celular): 3 secciones grandes */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-linea bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-linea bg-superficie/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
         <div className="grid grid-cols-3">
           {SECCIONES.map((s) => {
             const on = seccion?.id === s.id;
             return (
-              <button key={s.id} onClick={() => ir(s.tabs[0].id)} className={cx('flex flex-col items-center gap-1 py-2.5 text-xs font-medium', on ? 'text-primario' : 'text-suave')}>
-                <span className={cx('rounded-full px-5 py-1 transition', on && 'bg-primario-50')}>
-                  <s.icon size={22} strokeWidth={1.9} />
+              <button
+                key={s.id}
+                onClick={() => { vibrar(); ir(s.tabs[0].id); }}
+                className={cx('flex touch-manipulation flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors', on ? 'text-primario' : 'text-suave')}
+              >
+                <span key={on ? 'on' : 'off'} className={cx('rounded-full px-5 py-1 transition-colors duration-200', on && 'anim-pop bg-primario-50')}>
+                  <s.icon size={22} strokeWidth={on ? 2.2 : 1.9} />
                 </span>
                 {s.label}
               </button>

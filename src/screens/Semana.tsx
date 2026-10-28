@@ -77,15 +77,15 @@ export function Semana({ param }: { param?: string }) {
       <Titulo titulo="Calendario" />
 
       {/* Navegación: semana + selector de día */}
-      <div className="mb-5 rounded-xl border border-linea bg-white p-3 shadow-[0_1px_2px_rgba(16,24,40,.04)]">
+      <div className="mb-5 rounded-xl border border-linea bg-superficie p-3 shadow-[0_1px_2px_rgba(16,24,40,.04)]">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <button onClick={() => setFecha(sumarDias(fecha, -7))} className="rounded-lg border border-linea bg-white p-2 hover:bg-fondo" aria-label="Semana anterior">
+          <button onClick={() => setFecha(sumarDias(fecha, -7))} className="rounded-lg border border-linea bg-superficie p-2 hover:bg-fondo" aria-label="Semana anterior">
             <ChevronLeft size={18} />
           </button>
           <div className="min-w-36 text-center text-sm font-semibold">
             {fmtCorto(dias[0])} – {fmtCorto(dias[6])}
           </div>
-          <button onClick={() => setFecha(sumarDias(fecha, 7))} className="rounded-lg border border-linea bg-white p-2 hover:bg-fondo" aria-label="Semana siguiente">
+          <button onClick={() => setFecha(sumarDias(fecha, 7))} className="rounded-lg border border-linea bg-superficie p-2 hover:bg-fondo" aria-label="Semana siguiente">
             <ChevronRight size={18} />
           </button>
           {fecha !== h && (
@@ -127,24 +127,24 @@ export function Semana({ param }: { param?: string }) {
                 onClick={() => { setFecha(d); setVista('dia'); }}
                 className={cx(
                   'flex flex-col items-center rounded-lg border py-1.5 transition',
-                  sel ? 'border-primario bg-primario text-white' : 'border-linea bg-white hover:bg-fondo',
+                  sel ? 'border-primario bg-primario text-sobre' : 'border-linea bg-superficie hover:bg-fondo',
                 )}
               >
-                <span className={cx('text-[11px] font-medium uppercase', sel ? 'text-white/80' : 'text-suave')}>{DIAS_CORTOS[i]}</span>
+                <span className={cx('text-[11px] font-medium uppercase', sel ? 'text-sobre/80' : 'text-suave')}>{DIAS_CORTOS[i]}</span>
                 <span className={cx('text-lg leading-tight font-semibold', !sel && d === h && 'text-primario')}>{Number(d.slice(8))}</span>
                 {/* Celular: punto verde o número rojo · Computador: texto (nada si aún no hay residentes) */}
                 <span className={cx('mt-1 sm:hidden', vacio && 'invisible')}>
                   {faltan ? (
-                    <span className={cx('grid size-4 place-items-center rounded-full text-[10px] font-bold', sel ? 'bg-white text-alerta' : 'bg-alerta text-white')}>{faltan}</span>
+                    <span className={cx('grid size-4 place-items-center rounded-full text-[10px] font-bold', sel ? 'bg-sobre text-alerta' : 'bg-alerta text-sobre')}>{faltan}</span>
                   ) : (
-                    <span className={cx('block size-2 rounded-full', sel ? 'bg-white' : 'bg-ok')} />
+                    <span className={cx('block size-2 rounded-full', sel ? 'bg-sobre' : 'bg-ok')} />
                   )}
                 </span>
                 <span
                   className={cx(
                     'mt-0.5 hidden rounded px-1 text-[10px] font-semibold sm:inline',
                     vacio && 'invisible',
-                    faltan ? (sel ? 'bg-white text-alerta' : 'bg-alerta-50 text-alerta') : sel ? 'text-white/80' : 'text-ok',
+                    faltan ? (sel ? 'bg-sobre text-alerta' : 'bg-alerta-50 text-alerta') : sel ? 'text-sobre/80' : 'text-ok',
                   )}
                 >
                   {faltan ? `Faltan ${faltan}` : 'Completo'}
@@ -220,7 +220,7 @@ function VistaDia({ fecha, filtro, onFiltro, agrupar, mostrarBuscar, onCerrarBus
         </div>
       )}
 
-      <div data-tour="cal-tabla" className="overflow-hidden rounded-xl border border-linea bg-white shadow-[0_1px_2px_rgba(16,24,40,.04)]">
+      <div data-tour="cal-tabla" className="overflow-hidden rounded-xl border border-linea bg-superficie shadow-[0_1px_2px_rgba(16,24,40,.04)]">
         {/* Encabezado: Residente | Día | Noche */}
         <div className="grid border-b border-linea" style={{ gridTemplateColumns: columnas }}>
           <div className="px-3 py-2.5 text-xs font-medium text-suave">Residente</div>
@@ -285,7 +285,7 @@ function CeldaResidente({ p, t, fecha, items, onModal }: { p: Persona; t: Turno;
         <button
           key={i}
           onClick={() => onModal({ fecha, turnoId: t.id, personaId: p.id })}
-          className="flex w-full items-center gap-1 rounded-md border border-dashed border-alerta-200 bg-alerta-50 px-2 py-1.5 text-xs font-medium text-alerta hover:bg-[#fbe9e7]"
+          className="flex w-full items-center gap-1 rounded-md border border-dashed border-alerta-200 bg-alerta-50 px-2 py-1.5 text-xs font-medium text-alerta hover:bg-alerta-100"
         >
           <Plus size={13} /> Asignar
         </button>
@@ -293,7 +293,7 @@ function CeldaResidente({ p, t, fecha, items, onModal }: { p: Persona; t: Turno;
       {req === 0 && items.length === 0 && (
         <button
           onClick={() => onModal({ fecha, turnoId: t.id, personaId: p.id })}
-          className="flex w-full items-center rounded-md px-2 py-1.5 text-xs text-[#c4c9d1] hover:bg-fondo hover:text-suave"
+          className="flex w-full items-center rounded-md px-2 py-1.5 text-xs text-apagado hover:bg-fondo hover:text-suave"
           title="Este turno no lo necesita. Toca para asignar igual."
         >
           —
@@ -325,7 +325,7 @@ function Cobertura({ hay, req, grande }: { hay: number; req: number; grande?: bo
     <span
       className={cx(
         'inline-flex shrink-0 items-center gap-1 rounded-md font-semibold tabular-nums',
-        grande ? 'bg-white px-2.5 py-1 text-sm' : 'px-1.5 py-0.5 text-xs',
+        grande ? 'bg-superficie px-2.5 py-1 text-sm' : 'px-1.5 py-0.5 text-xs',
         ok ? 'text-ok' : 'text-alerta',
         !grande && (ok ? 'bg-ok-50' : 'bg-alerta-50'),
       )}
@@ -358,7 +358,7 @@ function VistaCuidadoras({ dias, lunes, delaSemana, onModal }: { dias: string[];
 
   return (
     <div>
-      <div className="overflow-hidden rounded-xl border border-linea bg-white shadow-[0_1px_2px_rgba(16,24,40,.04)]">
+      <div className="overflow-hidden rounded-xl border border-linea bg-superficie shadow-[0_1px_2px_rgba(16,24,40,.04)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] border-collapse text-sm">
             <thead>
@@ -375,8 +375,8 @@ function VistaCuidadoras({ dias, lunes, delaSemana, onModal }: { dias: string[];
             </thead>
             <tbody>
               {filas.map(({ c, r }) => (
-                <tr key={c.id} className="group/fila hover:bg-[#fafbfc]">
-                  <td className="sticky left-0 z-10 border-b border-linea bg-white px-3 py-1.5 group-hover/fila:bg-[#fafbfc]">
+                <tr key={c.id} className="group/fila hover:bg-hover">
+                  <td className="sticky left-0 z-10 border-b border-linea bg-superficie px-3 py-1.5 group-hover/fila:bg-hover">
                     <div className="flex items-center gap-2">
                       <Avatar c={c} size={26} />
                       <span className="truncate font-medium">{c.nombre}</span>

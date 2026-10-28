@@ -3,6 +3,7 @@ import { Check, Plus, Search, Trash2, UserPlus } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Cliente, Persona } from '../lib/types';
 import { clp, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
+import { vibrar } from '../lib/tacto';
 import { Boton, Campo, Card, Contador, MenuMas, Modal, Titulo, cx, inputCls } from '../components/ui';
 
 /** Clientes = apoderados. Cada uno tiene a cargo una o más personas cuidadas. */
@@ -29,6 +30,7 @@ export function Clientes({ param }: { param?: string }) {
 
   const registrarPago = (c: Cliente) => {
     if (!confirm(`¿Registrar el pago de ${clp(c.cobroSemanal)} de ${c.nombre} en Caja?`)) return;
+    vibrar(12);
     upsert('movimientos', { id: uid(), fecha: h, tipo: 'ingreso', concepto: 'Servicio de cuidado semanal', cliente: c.nombre, monto: c.cobroSemanal, medio: 'transferencia' });
   };
 
@@ -178,7 +180,7 @@ function FormCliente({ inicial, onClose }: { inicial: Cliente; onClose: () => vo
         <label className="flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" className="size-4" checked={f.activo} onChange={(e) => set({ activo: e.target.checked })} /> Cliente activo
         </label>
-        <div className="sticky bottom-0 -mx-5 -mb-6 border-t border-linea bg-white px-5 py-3">
+        <div className="sticky -bottom-6 z-10 -mx-5 -mb-6 border-t border-linea bg-superficie px-5 py-3">
           <Boton className="w-full" disabled={!f.nombre.trim()} onClick={guardar}>
             Guardar
           </Boton>

@@ -81,13 +81,13 @@ export function Caja() {
 
       {/* Período + Registrar + Más */}
       <div className="mb-4 flex items-center gap-2">
-        <button onClick={() => mover(-1)} className="rounded-lg border border-linea bg-white p-2 hover:bg-fondo" aria-label="Anterior">
+        <button onClick={() => mover(-1)} className="rounded-lg border border-linea bg-superficie p-2 hover:bg-fondo" aria-label="Anterior">
           <ChevronLeft size={18} />
         </button>
         <div className="min-w-0 flex-1 truncate text-center font-semibold">
           {periodo === 'mes' ? fmtMes(desde) : `${fmtCorto(desde)} – ${fmtCorto(hasta)}`}
         </div>
-        <button onClick={() => mover(1)} className="rounded-lg border border-linea bg-white p-2 hover:bg-fondo" aria-label="Siguiente">
+        <button onClick={() => mover(1)} className="rounded-lg border border-linea bg-superficie p-2 hover:bg-fondo" aria-label="Siguiente">
           <ChevronRight size={18} />
         </button>
         <Boton chico aria-label="Registrar ingreso o gasto" onClick={() => setForm(nuevo('ingreso'))}>
@@ -106,7 +106,7 @@ export function Caja() {
       </div>
 
       {/* 1. Tres cifras */}
-      <div data-tour="caja-kpis" className="mb-4 grid grid-cols-3 divide-x divide-linea overflow-hidden rounded-xl border border-linea bg-white">
+      <div data-tour="caja-kpis" className="mb-4 grid grid-cols-3 divide-x divide-linea overflow-hidden rounded-xl border border-linea bg-superficie">
         <Kpi label="Entró" valor={ingresos} color="text-ok" />
         <Kpi label="Salió" valor={pagosCuid + otrosGastos} color="text-tinta" />
         <Kpi label="Te queda" valor={saldo} color={saldo >= 0 ? 'text-primario' : 'text-alerta'} />
@@ -191,8 +191,8 @@ function FormMovimiento({ inicial, clientes, esNuevo, onClose, onGuardar, onBorr
           valor={f.tipo}
           onChange={(tipo) => set({ tipo })}
           opciones={[
-            { id: 'ingreso', label: 'Entró plata', bg: '#dcf3e9', fg: '#22724f' },
-            { id: 'gasto', label: 'Salió plata', bg: '#ffe7d6', fg: '#a8501a' },
+            { id: 'ingreso', label: 'Entró plata', bg: 'var(--c-ok-50)', fg: 'var(--c-ok)' },
+            { id: 'gasto', label: 'Salió plata', bg: 'var(--c-aviso-50)', fg: 'var(--c-aviso)' },
           ]}
         />
         <Campo label="Monto">

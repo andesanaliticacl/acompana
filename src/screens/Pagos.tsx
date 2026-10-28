@@ -4,6 +4,7 @@ import { useStore } from '../state/store';
 import type { Pago } from '../lib/types';
 import { clp, diasEntre, fmtCorto, fmtDia, fmtHoras, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
 import { descargarCSV, linkWhatsApp, resumenSemana } from '../lib/calculos';
+import { vibrar } from '../lib/tacto';
 import { Avatar, Boton, Card, MenuMas, Titulo, cx, inputCls, primerNombre } from '../components/ui';
 
 export function Pagos() {
@@ -42,20 +43,20 @@ export function Pagos() {
 
       {/* Semana + Más */}
       <div className="mb-4 flex items-center gap-2">
-        <button onClick={() => setLunes(sumarDias(lunes, -7))} className="rounded-lg border border-linea bg-white p-2 hover:bg-fondo" aria-label="Semana anterior">
+        <button onClick={() => setLunes(sumarDias(lunes, -7))} className="rounded-lg border border-linea bg-superficie p-2 hover:bg-fondo" aria-label="Semana anterior">
           <ChevronLeft size={18} />
         </button>
         <div className="flex-1 text-center font-semibold">
           {fmtCorto(lunes)} – {fmtCorto(domingo)}
         </div>
-        <button onClick={() => setLunes(sumarDias(lunes, 7))} className="rounded-lg border border-linea bg-white p-2 hover:bg-fondo" aria-label="Semana siguiente">
+        <button onClick={() => setLunes(sumarDias(lunes, 7))} className="rounded-lg border border-linea bg-superficie p-2 hover:bg-fondo" aria-label="Semana siguiente">
           <ChevronRight size={18} />
         </button>
         <MenuMas label="" items={[{ label: 'Descargar Excel', icon: <Download size={16} />, onClick: exportar }]} />
       </div>
 
       {/* 1. Lo que falta pagar */}
-      <div data-tour="pagos-resumen" className="mb-4 rounded-xl border border-linea bg-white p-4">
+      <div data-tour="pagos-resumen" className="mb-4 rounded-xl border border-linea bg-superficie p-4">
         <div className="text-sm text-suave">Por pagar el {fmtDia(domingo).toLowerCase()}</div>
         <div className="text-3xl font-semibold tracking-tight text-primario tabular-nums">{clp(total - pagado)}</div>
         <div className="mt-1 text-sm text-suave">
@@ -91,14 +92,14 @@ export function Pagos() {
                       <Check size={13} strokeWidth={3} /> Pagado
                     </span>
                   ) : (
-                    <Boton chico className="w-20 shrink-0" onClick={() => guardarPago(c.id, { pagadoEl: h, monto: r.total })}>
+                    <Boton chico className="w-20 shrink-0" onClick={() => { vibrar(12); guardarPago(c.id, { pagadoEl: h, monto: r.total }); }}>
                       Pagar
                     </Boton>
                   )}
                 </div>
 
                 {abierta && (
-                  <div className="space-y-3 bg-fondo px-4 py-3 text-sm">
+                  <div className="anim-entrar space-y-3 bg-fondo px-4 py-3 text-sm">
                     <div className="text-suave">
                       {r.turnos} turnos · {fmtHoras(r.horas)} × {clp(r.tarifa)} = {clp(r.subtotal)}
                       {r.faltas > 0 && <span className="text-alerta"> · {r.faltas} falta{r.faltas > 1 ? 's' : ''}</span>}
