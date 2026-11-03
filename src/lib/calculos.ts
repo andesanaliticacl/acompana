@@ -95,6 +95,23 @@ export function vistaSede(db: DB): DB {
   };
 }
 
+/** Puntualidad de todo el personal de una pasada (para listas largas). */
+export function puntualidades(db: DB) {
+  const h = hoy();
+  const conteo = new Map<string, { aTiempo: number; atrasos: number }>();
+  for (const a of db.asignaciones) {
+    if (a.fecha > h || (a.estado !== 'asistio' && a.estado !== 'atraso')) continue;
+    const c = conteo.get(a.cuidadoraId) ?? { aTiempo: 0, atrasos: 0 };
+    if (a.estado === 'asistio') c.aTiempo++;
+    else c.atrasos++;
+    conteo.set(a.cuidadoraId, c);
+  }
+  return (id: string) => {
+    const c = conteo.get(id);
+    return c ? c.aTiempo / (c.aTiempo + c.atrasos) : null;
+  };
+}
+
 /** Indicadores históricos de una cuidadora. */
 export function estadisticas(db: DB, cuidadoraId: string) {
   const h = hoy();

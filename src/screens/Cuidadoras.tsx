@@ -1,10 +1,10 @@
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ChevronRight, MessageCircle, Pencil, Phone, Search, UserPlus } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Cuidadora } from '../lib/types';
 import { AREAS, ESTADOS, RASGOS, SEDE_PARTICULARES, nombreArea, type Area } from '../lib/types';
 import { clp, edad, fmtDia, fmtHora, fmtHoras } from '../lib/fechas';
-import { estadisticas, linkWhatsApp, nombreSede, personaDe, sedeActiva } from '../lib/calculos';
+import { estadisticas, linkWhatsApp, nombreSede, personaDe, puntualidades, sedeActiva } from '../lib/calculos';
 import { COLORES, PALETA } from '../lib/colores';
 import { uid } from '../lib/fechas';
 import { Avatar, Boton, Campo, Card, Estrellas, MenuMas, Modal, Rasgo, Titulo, TurnoIcono, cx, inputCls, primerNombre } from '../components/ui';
@@ -16,6 +16,7 @@ export function Cuidadoras({ param }: { param?: string }) {
   const [editar, setEditar] = useState<Cuidadora | null>(null);
   const [verInactivas, setVerInactivas] = useState(false);
   const [filtro, setFiltro] = useState<Filtro>('todos');
+  const puntualidad = useMemo(() => puntualidades(db), [db]);
 
   const lista = db.cuidadoras
     .filter((c) => (verInactivas ? true : c.activa))
@@ -60,7 +61,7 @@ export function Cuidadoras({ param }: { param?: string }) {
       <Card tour="cuid-lista" className="!p-0">
         <ul className="divide-y divide-linea">
           {lista.map((c) => {
-            const s = estadisticas(db, c.id);
+            const p = puntualidad(c.id);
             return (
               <li key={c.id}>
                 <button onClick={() => setVerId(c.id)} className={cx('flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-fondo', !c.activa && 'opacity-60')}>
@@ -72,7 +73,7 @@ export function Cuidadoras({ param }: { param?: string }) {
                     </span>
                     <span className="flex min-w-0 items-center gap-1.5 text-sm text-suave">
                       <EtiquetasPersonal c={c} />
-                      <span className="truncate">{[nombreArea(c.area), c.area !== 'particular' && nombreSede(db, c.sedeId), s.puntualidad !== null ? `${pct(s.puntualidad)} puntual` : ''].filter(Boolean).join(' · ')}</span>
+                      <span className="truncate">{[nombreArea(c.area), c.area !== 'particular' && nombreSede(db, c.sedeId), p !== null ? `${pct(p)} puntual` : ''].filter(Boolean).join(' · ')}</span>
                     </span>
                   </span>
                   <ChevronRight size={18} className="shrink-0 text-suave" />
