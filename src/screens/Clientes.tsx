@@ -4,6 +4,7 @@ import { useStore } from '../state/store';
 import type { Cliente, Persona } from '../lib/types';
 import { clp, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
 import { nombreSede, sedeActiva } from '../lib/calculos';
+import { SEDE_PARTICULARES } from '../lib/types';
 import { vibrar } from '../lib/tacto';
 import { Boton, Campo, Card, Contador, MenuMas, Modal, Titulo, cx, inputCls } from '../components/ui';
 
@@ -13,6 +14,7 @@ export function Clientes({ param }: { param?: string }) {
   const [q, setQ] = useState(param ?? '');
   const [editar, setEditar] = useState<Cliente | null>(null);
   const [verInactivos, setVerInactivos] = useState(false);
+  const [linea, setLinea] = useState<'todos' | 'acali' | 'particulares'>('todos');
   const h = hoy();
   const lunes = lunesDe(h);
   const domingo = sumarDias(lunes, 6);
@@ -20,6 +22,7 @@ export function Clientes({ param }: { param?: string }) {
   const personasDe = (c: Cliente) => db.personas.filter((p) => p.clienteId === c.id);
   const lista = db.clientes
     .filter((c) => verInactivos || c.activo)
+    .filter((c) => linea === 'todos' || (linea === 'particulares') === (c.sedeId === SEDE_PARTICULARES))
     .filter((c) => [c.nombre, nombreSede(db, c.sedeId), ...personasDe(c).map((p) => p.nombre)].join(' ').toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
   const inactivos = db.clientes.filter((c) => !c.activo).length;
@@ -51,6 +54,19 @@ export function Clientes({ param }: { param?: string }) {
         {inactivos > 0 && (
           <MenuMas label="" items={[{ label: verInactivos ? 'Ocultar inactivos' : `Ver inactivos (${inactivos})`, onClick: () => setVerInactivos((x) => !x) }]} />
         )}
+      </div>
+
+      {/* ACALI (sedes) o Particulares */}
+      <div className="mb-4 flex gap-1.5">
+        {([['todos', 'Todos'], ['acali', 'ACALI'], ['particulares', 'Particulares']] as const).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => setLinea(id)}
+            className={cx('rounded-full border px-3 py-1.5 text-sm font-medium transition', linea === id ? 'border-primario bg-primario-50 text-primario' : 'border-linea bg-superficie text-suave hover:bg-hover')}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Lista simple: cliente, su residente y si pagó la semana */}
@@ -129,7 +145,7 @@ function FormCliente({ inicial, onClose }: { inicial: Cliente; onClose: () => vo
           <Campo label="Cliente (apoderado)">
             <input className={inputCls} value={f.nombre} onChange={(e) => set({ nombre: e.target.value })} placeholder="Ej: Carolina Larraín" autoFocus />
           </Campo>
-          <Campo label="Sede">
+          <Campo label="Sede o Particular">
             <select className={inputCls} value={f.sedeId ?? ''} onChange={(e) => cambiarSede(e.target.value || undefined)}>
               {db.sedes.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
               <option value="">Sin sede</option>
@@ -153,16 +169,18 @@ function FormCliente({ inicial, onClose }: { inicial: Cliente; onClose: () => vo
           <div className="space-y-3">
             {personas.map((p) => (
               <div key={p.id} className="space-y-3 rounded-lg border border-linea bg-fondo p-3">
-                <div className="grid gap-3 sm:grid-cols-[1fr_140px_150px_auto]">
+                <div className={cx('grid gap-3', f.sedeId === SEDE_PARTICULARES ? 'sm:grid-cols-[1fr_150px_auto]' : 'sm:grid-cols-[1fr_140px_150px_auto]')}>
                   <Campo label="Nombre">
                     <input className={inputCls} value={p.nombre} onChange={(e) => setPersona(p.id, { nombre: e.target.value })} placeholder="Ej: Inés Larraín" />
                   </Campo>
-                  <Campo label="Piso">
-                    <select className={inputCls} value={p.pisoId ?? ''} onChange={(e) => setPersona(p.id, { pisoId: e.target.value || undefined })}>
-                      {pisosDeSede(f.sedeId).map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
-                      <option value="">Sin piso</option>
-                    </select>
-                  </Campo>
+                  {f.sedeId !== SEDE_PARTICULARES && (
+                    <Campo label="Piso">
+                      <select className={inputCls} value={p.pisoId ?? ''} onChange={(e) => setPersona(p.id, { pisoId: e.target.value || undefined })}>
+                        {pisosDeSede(f.sedeId).map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+                        <option value="">Sin piso</option>
+                      </select>
+                    </Campo>
+                  )}
                   <Campo label="Nacimiento">
                     <input type="date" className={inputCls} value={p.fechaNacimiento ?? ''} onChange={(e) => setPersona(p.id, { fechaNacimiento: e.target.value || undefined })} />
                   </Campo>

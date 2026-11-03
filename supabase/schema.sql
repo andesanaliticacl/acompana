@@ -12,7 +12,8 @@ create table agencias (
 create table sedes (
   id uuid primary key default gen_random_uuid(),
   agencia_id uuid not null references agencias(id) on delete cascade,
-  nombre text not null
+  nombre text not null,
+  es_particulares boolean not null default false  -- la línea Particulares: sin pisos
 );
 
 create table cuidadoras (
@@ -28,9 +29,8 @@ create table cuidadoras (
   valoracion smallint not null default 3 check (valoracion between 1 and 5),
   valor_turno int not null default 0,          -- CLP: se paga por turno
   valor_hora_extra int not null default 0,     -- CLP
-  area text not null default 'piso' check (area in ('piso', 'cocina', 'aseo')),
+  area text not null default 'piso' check (area in ('piso', 'cocina', 'aseo', 'particular')),
   emergencia boolean not null default false,   -- se le paga por día
-  particular boolean not null default false,
   color text not null default 'rosa',
   activa boolean not null default true,
   notas text,                                  -- privadas de la dueña

@@ -19,8 +19,8 @@ export const PASOS: Paso[] = [
   },
   {
     tab: 'hoy', sel: 'sede',
-    titulo: 'Cambiar de sede',
-    texto: 'Con este botón eliges la sede. Hoy y el Calendario muestran solo lo de esa sede.',
+    titulo: 'Sedes y Particulares',
+    texto: 'Con este botón eliges una sede de ACALI o Particulares. Hoy y el Calendario muestran solo lo de esa opción.',
   },
   {
     tab: 'hoy', sel: 'hoy-resumen',
@@ -55,12 +55,12 @@ export const PASOS: Paso[] = [
   {
     tab: 'cuidadoras', sel: 'cuid-lista',
     titulo: 'Personal',
-    texto: 'Tu equipo por área (Piso, Cocina, Aseo), con sus etiquetas de Emergencia y Particular. Toca a alguien para ver su ficha o escribirle.',
+    texto: 'Tu equipo por área: Piso, Cocina y Aseo en las sedes, y Particular para clientes particulares. También ves quién es de Emergencia. Toca a alguien para ver su ficha o escribirle.',
   },
   {
     tab: 'clientes', sel: 'cli-lista',
     titulo: 'Clientes',
-    texto: 'El cliente es el apoderado que paga; debajo ves su residente y su piso. "Cobrar" anota su pago de la semana en Caja.',
+    texto: 'El cliente es el apoderado que paga: de una sede de ACALI o particular. Debajo ves su residente. "Cobrar" anota su pago de la semana en Caja.',
   },
   {
     tab: 'pagos', sel: 'pagos-resumen',

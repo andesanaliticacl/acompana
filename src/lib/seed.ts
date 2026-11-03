@@ -1,3 +1,4 @@
+import { SEDE_PARTICULARES } from './types';
 import type { Asignacion, Cliente, Cuidadora, DB, Movimiento, Persona, Piso, Sede, Turno } from './types';
 import { hoy, lunesDe, moverQuincena, quincenaDe, sumarDias, uid } from './fechas';
 import { horario, resumenPeriodo } from './calculos';
@@ -15,7 +16,8 @@ export const TURNOS_BASE: Turno[] = [
 
 // Sedes de ACALI (son datos reales de la empresa: se cargan siempre, también en blanco)
 export const SEDES_ACALI: Sede[] = ['Dominico', 'Candil', 'Tranqueras', 'Arturo Medina', 'Coventri', 'Errazuriz', 'La Florida', 'Valle Alegre']
-  .map((nombre) => ({ id: nombre.toLowerCase().replace(/ /g, '-'), nombre }));
+  .map((nombre) => ({ id: nombre.toLowerCase().replace(/ /g, '-'), nombre }))
+  .concat({ id: SEDE_PARTICULARES, nombre: 'Particulares' });
 
 export const PISOS_BASE: Piso[] = [
   { id: 'p1', nombre: 'Piso 1', sedeId: 'dominico' },
@@ -32,6 +34,7 @@ export const CLIENTES_BASE: Cliente[] = [
   { id: 'k4', sedeId: 'dominico', nombre: 'Andrés Morales', telefono: '+56 9 5555 0204', cobroSemanal: 560000, activo: true },
   { id: 'k5', sedeId: 'candil', nombre: 'Patricia Soto', telefono: '+56 9 5555 0205', cobroSemanal: 1080000, activo: true },
   { id: 'k6', sedeId: 'candil', nombre: 'Rodrigo Vera', telefono: '+56 9 5555 0206', cobroSemanal: 620000, activo: true },
+  { id: 'k7', sedeId: SEDE_PARTICULARES, nombre: 'Francisca Lira', telefono: '+56 9 5555 0207', cobroSemanal: 700000, activo: true },
 ];
 
 // Personas cuidadas (adultos mayores), cada una a cargo de un cliente
@@ -42,6 +45,7 @@ export const PERSONAS_BASE: Persona[] = [
   { id: 'r4', clienteId: 'k4', nombre: 'Teresa Morales', pisoId: 'p2', fechaNacimiento: '1944-06-21', cuidados: 'Autovalente. Apoyo en ducha y comidas.', requeridas: { dia: 1, noche: 0 }, activa: true },
   { id: 'r5', clienteId: 'k5', nombre: 'Raúl Soto', pisoId: 'p3', fechaNacimiento: '1939-02-27', cuidados: 'Parkinson. Riesgo de caídas.', requeridas: { dia: 1, noche: 1 }, activa: true },
   { id: 'r6', clienteId: 'k6', nombre: 'Elena Vera', pisoId: 'p4', fechaNacimiento: '1942-08-19', cuidados: 'Apoyo en comidas y paseo diario.', requeridas: { dia: 1, noche: 0 }, activa: true },
+  { id: 'r7', clienteId: 'k7', nombre: 'Tomás Lira', fechaNacimiento: '1936-03-29', cuidados: 'Atención en su domicilio. Paseo diario.', requeridas: { dia: 1, noche: 0 }, activa: true },
 ];
 
 type Base = Omit<Cuidadora, 'id' | 'activa' | 'notas' | 'telefono'> & { notas?: string };
@@ -69,7 +73,8 @@ const CUIDADORAS: Cuidadora[] = [
   c(17, { area: 'cocina', sedeId: 'candil', nombre: 'Teresa Lagos', fechaNacimiento: '1970-12-02', experiencia: 20, descripcion: 'Encargada de cocina.', rasgos: ['Responsable', 'Cocina rico'], valoracion: 4, valorTurno: 42000, valorHoraExtra: 4500, color: 'teja' }),
   c(18, { area: 'aseo', sedeId: 'candil', nombre: 'Nora Silva', fechaNacimiento: '1986-05-30', experiencia: 6, descripcion: 'Aseo y lavandería.', rasgos: ['Tranquila'], valoracion: 3, valorTurno: 38000, valorHoraExtra: 4000, color: 'violeta' }),
   c(19, { area: 'piso', emergencia: true, nombre: 'Camila Rivas', fechaNacimiento: '1993-04-08', experiencia: 5, descripcion: 'Personal de emergencia: cubre cualquier sede con poco aviso.', rasgos: ['Responsable', 'Primeros auxilios'], valoracion: 5, valorTurno: 65000, valorHoraExtra: 7000, color: 'azul' }),
-  c(20, { area: 'piso', particular: true, sedeId: 'dominico', nombre: 'Isabel Núñez', fechaNacimiento: '1984-01-17', experiencia: 9, descripcion: 'Atención particular.', rasgos: ['Amable', 'Cariñosa'], valoracion: 4, valorTurno: 52000, valorHoraExtra: 5000, color: 'verde' }),
+  c(20, { area: 'particular', sedeId: SEDE_PARTICULARES, nombre: 'Isabel Núñez', fechaNacimiento: '1984-01-17', experiencia: 9, descripcion: 'Atención particular.', rasgos: ['Amable', 'Cariñosa'], valoracion: 4, valorTurno: 52000, valorHoraExtra: 5000, color: 'verde' }),
+  c(21, { area: 'particular', sedeId: SEDE_PARTICULARES, nombre: 'Ximena Bravo', fechaNacimiento: '1989-10-21', experiencia: 7, descripcion: 'Atención a domicilio.', rasgos: ['Responsable', 'Paciente'], valoracion: 4, valorTurno: 52000, valorHoraExtra: 5000, color: 'teja' }),
 ];
 
 // Cada equipo rota entre sus puestos (residentes de una sede)
@@ -78,6 +83,7 @@ const EQUIPOS: { turno: 'dia' | 'noche'; personal: string[]; puestos: string[] }
   { turno: 'noche', personal: ['c7', 'c8', 'c9'], puestos: ['r1', 'r3'] },
   { turno: 'dia', personal: ['c6', 'c12', 'c14'], puestos: ['r5', 'r6'] },
   { turno: 'noche', personal: ['c10', 'c11'], puestos: ['r5'] },
+  { turno: 'dia', personal: ['c20', 'c21'], puestos: ['r7'] },
 ];
 // Cocina y Aseo: de día, de lunes a sábado
 const OTRAS_AREAS: [string, string][] = [['c15', 'dominico'], ['c16', 'dominico'], ['c17', 'candil'], ['c18', 'candil']];

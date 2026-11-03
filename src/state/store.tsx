@@ -6,7 +6,7 @@
  * supabase/schema.sql — las pantallas solo usan este hook `useStore()`.
  */
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
-import type { DB } from '../lib/types';
+import { SEDE_PARTICULARES, type DB } from '../lib/types';
 import { crearSeed, dbVacia } from '../lib/seed';
 import { vistaSede } from '../lib/calculos';
 
@@ -27,11 +27,21 @@ interface Store {
 
 const Ctx = createContext<Store | null>(null);
 
+/** Datos guardados antes de que Particulares fuera una línea propia (antes era una etiqueta del personal). */
+function migrar(db: DB): DB {
+  const sedes = db.sedes.some((s) => s.id === SEDE_PARTICULARES) ? db.sedes : [...db.sedes, { id: SEDE_PARTICULARES, nombre: 'Particulares' }];
+  const cuidadoras = db.cuidadoras.map((c) => {
+    const { particular, ...resto } = c as typeof c & { particular?: boolean };
+    return particular ? { ...resto, area: 'particular' as const, sedeId: SEDE_PARTICULARES } : resto;
+  });
+  return { ...db, sedes, cuidadoras };
+}
+
 function cargar(): DB {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      return JSON.parse(raw) as DB;
+      return migrar(JSON.parse(raw) as DB);
     }
   } catch {
     /* sin almacenamiento: partimos en blanco */

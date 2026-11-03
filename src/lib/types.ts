@@ -4,12 +4,19 @@ export type IconoTurno = 'manana' | 'tarde' | 'noche' | 'reloj';
 
 export type Estado = 'programado' | 'asistio' | 'atraso' | 'falto';
 
-/** Rubros del personal: Piso (salud) atiende residentes; Cocina y Aseo trabajan para la sede. */
-export type Area = 'piso' | 'cocina' | 'aseo';
+/**
+ * Dos líneas de negocio: ACALI (sus sedes, con Piso, Cocina y Aseo) y Particulares (clientes
+ * particulares con sus cuidadoras). Particulares se maneja como una "sede" fija, sin pisos.
+ */
+export const SEDE_PARTICULARES = 'particulares';
+
+/** Rubros del personal: Piso (salud) atiende residentes en las sedes; Cocina y Aseo trabajan para la sede; Particular atiende a clientes particulares. */
+export type Area = 'piso' | 'cocina' | 'aseo' | 'particular';
 export const AREAS: { id: Area; label: string }[] = [
   { id: 'piso', label: 'Piso (salud)' },
   { id: 'cocina', label: 'Cocina' },
   { id: 'aseo', label: 'Aseo' },
+  { id: 'particular', label: 'Particular' },
 ];
 export const nombreArea = (a?: Area) => AREAS.find((x) => x.id === (a ?? 'piso'))?.label ?? '';
 
@@ -27,7 +34,6 @@ export interface Cuidadora {
   area: Area;
   sedeId?: string; // sin sede = sirve en todas (ej. personal de emergencia)
   emergencia?: boolean; // etiqueta: se le paga por día
-  particular?: boolean; // etiqueta
   color: ColorKey;
   activa: boolean;
   notas: string; // notas privadas de la dueña

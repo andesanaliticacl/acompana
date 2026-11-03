@@ -1,6 +1,6 @@
 import { ListChecks, Moon, Plus, Sparkles, Sun, SunMoon, Trash2 } from 'lucide-react';
 import { useStore } from '../state/store';
-import type { Turno } from '../lib/types';
+import { SEDE_PARTICULARES, type Turno } from '../lib/types';
 import { DIAS_CORTOS, duracion, fmtHoras, uid } from '../lib/fechas';
 import { PALETA } from '../lib/colores';
 import { requeridasTurno } from '../lib/calculos';
@@ -135,14 +135,14 @@ export function Ajustes() {
         <div className="flex items-center justify-between border-b border-linea px-4 py-3">
           <div>
             <h2 className="font-semibold">Sedes y pisos</h2>
-            <p className="text-sm text-suave">Cada sede tiene sus pisos. Los pisos ordenan a los residentes.</p>
+            <p className="text-sm text-suave">Las sedes de ACALI, con sus pisos. Particulares va aparte y no tiene pisos.</p>
           </div>
           <Boton chico variante="suave" onClick={() => upsert('sedes', { id: uid(), nombre: 'Nueva sede' })}>
             <Plus size={16} /> Agregar sede
           </Boton>
         </div>
         <div className="divide-y divide-linea">
-          {db.sedes.map((s) => {
+          {db.sedes.filter((s) => s.id !== SEDE_PARTICULARES).map((s) => {
             const pisos = db.pisos.filter((p) => p.sedeId === s.id);
             return (
               <div key={s.id} className="space-y-2 px-4 py-3">

@@ -13,6 +13,7 @@ import { Logo, MenuMas, cx } from './components/ui';
 import { useTema } from './lib/tema';
 import { useStore } from './state/store';
 import { nombreSede, sedeActiva } from './lib/calculos';
+import { SEDE_PARTICULARES } from './lib/types';
 import { vibrar } from './lib/tacto';
 
 export type Tab = 'hoy' | 'semana' | 'cuidadoras' | 'clientes' | 'pagos' | 'caja' | 'ajustes';
@@ -43,7 +44,10 @@ function SelectorSede({ ir }: { ir: (t: Tab) => void }) {
         icono={<MapPin size={16} />}
         label={nombreSede(db, actual) ?? 'Agregar sede'}
         items={[
-          ...db.sedes.map((s) => ({ label: s.nombre, activo: s.id === actual, onClick: () => setAjustes({ sedeId: s.id }) })),
+          // Las sedes de ACALI y, al final, Particulares
+          ...[...db.sedes]
+            .sort((a, b) => Number(a.id === SEDE_PARTICULARES) - Number(b.id === SEDE_PARTICULARES))
+            .map((s) => ({ label: s.nombre, activo: s.id === actual, onClick: () => setAjustes({ sedeId: s.id }) })),
           { label: 'Administrar sedes', icon: <Settings size={16} />, onClick: () => ir('ajustes') },
         ]}
       />

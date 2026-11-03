@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { ChevronRight, MessageCircle, Pencil, Phone, Search, UserPlus } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Cuidadora } from '../lib/types';
-import { AREAS, ESTADOS, RASGOS, nombreArea, type Area } from '../lib/types';
+import { AREAS, ESTADOS, RASGOS, SEDE_PARTICULARES, nombreArea, type Area } from '../lib/types';
 import { clp, edad, fmtDia, fmtHora, fmtHoras } from '../lib/fechas';
 import { estadisticas, linkWhatsApp, nombreSede, personaDe, sedeActiva } from '../lib/calculos';
 import { COLORES, PALETA } from '../lib/colores';
@@ -19,7 +19,7 @@ export function Cuidadoras({ param }: { param?: string }) {
 
   const lista = db.cuidadoras
     .filter((c) => (verInactivas ? true : c.activa))
-    .filter((c) => (filtro === 'todos' ? true : filtro === 'emergencia' ? c.emergencia : filtro === 'particular' ? c.particular : c.area === filtro))
+    .filter((c) => (filtro === 'todos' ? true : filtro === 'emergencia' ? c.emergencia : c.area === filtro))
     .filter((c) => (c.nombre + ' ' + c.rasgos.join(' ') + ' ' + (nombreSede(db, c.sedeId) ?? '')).toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => b.valoracion - a.valoracion || a.nombre.localeCompare(b.nombre));
   const inactivas = db.cuidadoras.filter((c) => !c.activa).length;
@@ -35,7 +35,7 @@ export function Cuidadoras({ param }: { param?: string }) {
           <Search size={17} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-suave" />
           <input className={cx(inputCls, '!py-2 pl-10')} placeholder="Buscar por nombre o sede" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <Boton chico onClick={() => setEditar(nueva(sedeActiva(db), filtro === 'cocina' || filtro === 'aseo' ? filtro : 'piso'))}>
+        <Boton chico onClick={() => setEditar(nueva(sedeActiva(db), filtro === 'cocina' || filtro === 'aseo' || filtro === 'particular' ? filtro : sedeActiva(db) === SEDE_PARTICULARES ? 'particular' : 'piso'))}>
           <UserPlus size={16} /> Nueva
         </Boton>
         {inactivas > 0 && (
@@ -72,7 +72,7 @@ export function Cuidadoras({ param }: { param?: string }) {
                     </span>
                     <span className="flex min-w-0 items-center gap-1.5 text-sm text-suave">
                       <EtiquetasPersonal c={c} />
-                      <span className="truncate">{[nombreArea(c.area), nombreSede(db, c.sedeId), s.puntualidad !== null ? `${pct(s.puntualidad)} puntual` : ''].filter(Boolean).join(' · ')}</span>
+                      <span className="truncate">{[nombreArea(c.area), c.area !== 'particular' && nombreSede(db, c.sedeId), s.puntualidad !== null ? `${pct(s.puntualidad)} puntual` : ''].filter(Boolean).join(' · ')}</span>
                     </span>
                   </span>
                   <ChevronRight size={18} className="shrink-0 text-suave" />
@@ -95,7 +95,7 @@ export function Cuidadoras({ param }: { param?: string }) {
   );
 }
 
-type Filtro = 'todos' | Area | 'emergencia' | 'particular';
+type Filtro = 'todos' | Area | 'emergencia';
 const FILTROS: { id: Filtro; label: string }[] = [
   { id: 'todos', label: 'Todos' },
   { id: 'piso', label: 'Piso (salud)' },
@@ -109,7 +109,7 @@ function EtiquetasPersonal({ c }: { c: Cuidadora }) {
   return (
     <>
       {c.emergencia && <span className="shrink-0 rounded bg-alerta-50 px-1.5 text-xs font-medium text-alerta">Emergencia</span>}
-      {c.particular && <span className="shrink-0 rounded bg-info-50 px-1.5 text-xs font-medium text-info">Particular</span>}
+
     </>
   );
 }
@@ -126,7 +126,7 @@ function Mini({ label, valor }: { label: string; valor: string }) {
 }
 
 const nueva = (sedeId: string | undefined, area: Area): Cuidadora => ({
-  sedeId, area, valorHoraExtra: 5000,
+  sedeId: area === 'particular' ? SEDE_PARTICULARES : sedeId === SEDE_PARTICULARES ? undefined : sedeId, area, valorHoraExtra: 5000,
   id: uid(), nombre: '', fechaNacimiento: '1985-01-01', experiencia: 1, telefono: '+56 9 ', descripcion: '', rasgos: [],
   valoracion: 3, valorTurno: 50000, color: COLORES[Math.floor(Math.random() * COLORES.length)], activa: true, notas: '',
 });
@@ -153,7 +153,7 @@ function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; o
       <div className="flex items-center gap-4">
         <Avatar c={c} size={60} />
         <div className="min-w-0">
-          <p className="text-sm text-suave">{[nombreArea(c.area), nombreSede(db, c.sedeId) ?? 'Todas las sedes'].join(' · ')}</p>
+          <p className="text-sm text-suave">{c.area === 'particular' ? 'Atiende a clientes particulares' : [nombreArea(c.area), nombreSede(db, c.sedeId) ?? 'Todas las sedes'].join(' · ')}</p>
           <p className="text-sm text-suave">{edad(c.fechaNacimiento)} años · {c.experiencia} años de experiencia</p>
           <Estrellas valor={c.valoracion} size={16} />
           <div className="mt-1.5 flex flex-wrap gap-1">
@@ -232,6 +232,7 @@ function FormCuidadora({ inicial, onClose, onGuardada }: { inicial: Cuidadora; o
   const { db, upsert } = useStore();
   const [f, setF] = useState<Cuidadora>(inicial);
   const set = (p: Partial<Cuidadora>) => setF((x) => ({ ...x, ...p }));
+  const sedesAcali = db.sedes.filter((x) => x.id !== SEDE_PARTICULARES);
   const existe = db.cuidadoras.some((c) => c.id === f.id);
   const toggle = (r: string) => set({ rasgos: f.rasgos.includes(r) ? f.rasgos.filter((x) => x !== r) : [...f.rasgos, r] });
 
@@ -258,25 +259,31 @@ function FormCuidadora({ inicial, onClose, onGuardada }: { inicial: Cuidadora; o
         </Campo>
         <div className="grid gap-4 sm:grid-cols-2">
           <Campo label="Área">
-            <select className={inputCls} value={f.area} onChange={(e) => set({ area: e.target.value as Area })}>
+            <select
+              className={inputCls}
+              value={f.area}
+              onChange={(e) => {
+                const area = e.target.value as Area;
+                // Particular no tiene sede de ACALI; al salir de Particular vuelve a elegir una sede
+                const sedeId = area === 'particular' ? SEDE_PARTICULARES : f.sedeId === SEDE_PARTICULARES ? sedesAcali[0]?.id : f.sedeId;
+                set({ area, sedeId });
+              }}
+            >
               {AREAS.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
             </select>
           </Campo>
-          <Campo label="Sede">
-            <select className={inputCls} value={f.sedeId ?? ''} onChange={(e) => set({ sedeId: e.target.value || undefined })}>
-              {db.sedes.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
-              <option value="">Todas las sedes</option>
-            </select>
-          </Campo>
+          {f.area !== 'particular' && (
+            <Campo label="Sede">
+              <select className={inputCls} value={f.sedeId ?? ''} onChange={(e) => set({ sedeId: e.target.value || undefined })}>
+                {sedesAcali.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+                <option value="">Todas las sedes</option>
+              </select>
+            </Campo>
+          )}
         </div>
-        <div className="flex flex-wrap gap-x-5 gap-y-2">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input type="checkbox" className="size-5" checked={!!f.emergencia} onChange={(e) => set({ emergencia: e.target.checked })} /> Emergencia (pago diario)
-          </label>
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input type="checkbox" className="size-5" checked={!!f.particular} onChange={(e) => set({ particular: e.target.checked })} /> Particular
-          </label>
-        </div>
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input type="checkbox" className="size-5" checked={!!f.emergencia} onChange={(e) => set({ emergencia: e.target.checked })} /> Emergencia (pago diario)
+        </label>
         <div className="grid gap-4 sm:grid-cols-3">
           <Campo label="Fecha de nacimiento" ayuda={f.fechaNacimiento ? `${edad(f.fechaNacimiento)} años` : undefined}>
             <input type="date" className={inputCls} value={f.fechaNacimiento} onChange={(e) => set({ fechaNacimiento: e.target.value })} />

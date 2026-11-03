@@ -7,14 +7,14 @@ Gestión de turnos, personal, pagos y caja para ACALI (hogares de adultos mayore
 
 ## Qué hace
 
-Regla de 3: el menú tiene solo **Turnos** (Hoy · Calendario), **Personas** (Personal · Clientes) y **Dinero** (Pagos · Caja). Lo secundario va en "Más". En Turnos, un botón cambia de **sede**.
+Regla de 3: el menú tiene solo **Turnos** (Hoy · Calendario), **Personas** (Personal · Clientes) y **Dinero** (Pagos · Caja). Lo secundario va en "Más". En Turnos, un botón cambia de **sede** o a **Particulares** (clientes particulares con sus cuidadoras, sin pisos).
 
 | Pantalla | Para qué |
 |---|---|
 | **Hoy** | Quién cuida en cada turno hoy, marcar *Llegó / Tarde / No vino* con un toque, turnos sin cubrir de los próximos 7 días y lo que falta pagar en la quincena. |
 | **Calendario** | **Día a día**: eliges un día y ves el turno Día y Noche **por piso** o **por cliente**, con los cupos libres marcados. **Semana por cuidadora**: planilla con una fila por cuidadora. **Buscador general** (Ctrl+K) para cuidadoras, residentes y clientes. Asignación de varias cuidadoras a la vez, copiar semana anterior, exportar a Excel. |
 | **Clientes** | Apoderados que contratan: teléfono, cobro semanal y si ya pagó la semana. Cada uno tiene a cargo uno o más **residentes** (piso, edad, cuidados, cuántas cuidadoras necesita de día y de noche). |
-| **Personal** | Áreas: Piso (salud), Cocina y Aseo. Etiquetas: Emergencia y Particular. Sede o "todas las sedes". Ficha con edad, experiencia, valoración de la dueña (estrellas), rasgos (amable, puntual, seria, impuntual…), descripción, notas privadas. Asistencia y **puntualidad real** calculadas de lo que se marca cada día. WhatsApp / llamar. |
+| **Personal** | Áreas: Piso (salud), Cocina y Aseo en las sedes de ACALI, y Particular para clientes particulares. Etiqueta Emergencia (pago diario). Ficha con edad, experiencia, valoración de la dueña (estrellas), rasgos (amable, puntual, seria, impuntual…), descripción, notas privadas. Asistencia y **puntualidad real** calculadas de lo que se marca cada día. WhatsApp / llamar. |
 | **Pagos** | Por turno más horas extra rellenables (las faltas no se pagan). Quincenal (1–15 y 16–fin de mes), y diario para el personal de emergencia. Bono o descuento, marcar pagado, avisar por WhatsApp. Excel con sede y área. |
 | **Caja** | Ingresos (familias/clientes) y gastos por semana o mes. Los pagos a cuidadoras entran solos como gasto. "Te queda" = ganancia. |
 | **Ajustes** | Nombre, horarios de turnos, sedes y sus pisos, reiniciar datos de ejemplo. |

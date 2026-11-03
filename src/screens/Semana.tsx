@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { AlertTriangle, Building2, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Copy, Download, Plus, Search, Users, X } from 'lucide-react';
 import { useDbSede, useStore } from '../state/store';
 import type { Area, Asignacion, Persona, Turno } from '../lib/types';
-import { ESTADOS, nombreArea } from '../lib/types';
+import { ESTADOS, SEDE_PARTICULARES, nombreArea } from '../lib/types';
 import { DIAS_CORTOS, diasSemana, fmtCorto, fmtDia, fmtHora, fmtLargo, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
 import { asignacionesSemana, clienteDe, descargarCSV, enSede, horario, horasDe, huecos, nombreSede, personaDe, personasActivas, pisoDe, requeridasPersona, requeridasTurno, resumenSemana, sedeActiva, sedeDeAsignacion, vistaSede } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
@@ -199,13 +199,14 @@ function VistaDia({ fecha, filtro, onFiltro, agrupar, mostrarBuscar, onCerrarBus
       coincide(p.nombre, db.clientes.find((c) => c.id === p.clienteId)?.nombre, ...delDia.filter((a) => a.personaId === p.id).map(nombreCuidadora)),
     );
   const areaDe = (a: Asignacion) => db.cuidadoras.find((c) => c.id === a.cuidadoraId)?.area ?? 'piso';
-  const sueltas = delDia.filter((a) => !db.personas.some((p) => p.id === a.personaId) && areaDe(a) === 'piso' && coincide(nombreCuidadora(a)));
-  // Cocina y Aseo no atienden residentes: una fila por área
-  const otrasAreas: Area[] = (['cocina', 'aseo'] as Area[]).filter((x) => coincide(nombreArea(x), ...delDia.filter((a) => !a.personaId && areaDe(a) === x).map(nombreCuidadora)));
+  const enParticulares = sedeActiva(db) === SEDE_PARTICULARES;
+  const sueltas = delDia.filter((a) => !db.personas.some((p) => p.id === a.personaId) && areaDe(a) !== 'cocina' && areaDe(a) !== 'aseo' && coincide(nombreCuidadora(a)));
+  // Cocina y Aseo no atienden residentes: una fila por área (Particulares no las tiene)
+  const otrasAreas: Area[] = (enParticulares ? [] : (['cocina', 'aseo'] as Area[])).filter((x) => coincide(nombreArea(x), ...delDia.filter((a) => !a.personaId && areaDe(a) === x).map(nombreCuidadora)));
 
   const grupos =
     agrupar === 'piso'
-      ? [...db.pisos, { id: '', nombre: 'Sin piso' }].map((pi) => ({ id: pi.id || 'sin', titulo: pi.nombre, rs: residentes.filter((p) => (p.pisoId ?? '') === pi.id) }))
+      ? [...db.pisos, { id: '', nombre: enParticulares ? '' : 'Sin piso' }].map((pi) => ({ id: pi.id || 'sin', titulo: pi.nombre, rs: residentes.filter((p) => (p.pisoId ?? '') === pi.id) }))
       : [
           ...[...db.clientes].sort((a, b) => a.nombre.localeCompare(b.nombre)).map((c) => ({ id: c.id, titulo: c.nombre, rs: residentes.filter((p) => p.clienteId === c.id) })),
           { id: 'sin', titulo: 'Sin cliente', rs: residentes.filter((p) => !db.clientes.some((c) => c.id === p.clienteId)) },
@@ -244,7 +245,7 @@ function VistaDia({ fecha, filtro, onFiltro, agrupar, mostrarBuscar, onCerrarBus
 
         {grupos.filter((g) => g.rs.length).map((g) => (
           <div key={g.id}>
-            <div className="border-b border-linea bg-fondo px-3 py-1.5 text-xs font-semibold tracking-wide text-suave uppercase">{g.titulo}</div>
+            {g.titulo && <div className="border-b border-linea bg-fondo px-3 py-1.5 text-xs font-semibold tracking-wide text-suave uppercase">{g.titulo}</div>}
             {g.rs.map((p) => (
               <div key={p.id} className="grid border-b border-linea last:border-b-0" style={{ gridTemplateColumns: columnas }}>
                 <div className="flex items-center px-3 py-2 text-sm font-medium">
@@ -273,7 +274,7 @@ function VistaDia({ fecha, filtro, onFiltro, agrupar, mostrarBuscar, onCerrarBus
         )}
 
         {residentes.length === 0 && sueltas.length === 0 && (
-          <p className="border-b border-linea px-4 py-6 text-center text-sm text-suave">{q ? `Ningún residente coincide con “${filtro}” este día.` : 'No hay residentes en esta sede.'}</p>
+          <p className="border-b border-linea px-4 py-6 text-center text-sm text-suave">{q ? `Ningún residente coincide con “${filtro}” este día.` : enParticulares ? 'No hay clientes particulares con residentes.' : 'No hay residentes en esta sede.'}</p>
         )}
 
         {otrasAreas.length > 0 && (
