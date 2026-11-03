@@ -1,4 +1,4 @@
-import { Moon, Plus, Sparkles, Sun, SunMoon, Trash2 } from 'lucide-react';
+import { ListChecks, Moon, Plus, Sparkles, Sun, SunMoon, Trash2 } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { IconoTurno, Turno } from '../lib/types';
 import { DIAS_CORTOS, duracion, fmtHoras, uid } from '../lib/fechas';
@@ -187,6 +187,11 @@ export function Ajustes() {
           <Boton chico variante="fantasma" onClick={() => confirm('¿Dejar la app en blanco? Se borra todo lo ingresado.') && reiniciar('vacio')}>
             <Trash2 size={16} /> Dejar en blanco
           </Boton>
+          {db.ajustes.ocultarPasos && (
+            <Boton chico variante="fantasma" onClick={() => setAjustes({ ocultarPasos: false })}>
+              <ListChecks size={16} /> Mostrar primeros pasos
+            </Boton>
+          )}
         </div>
       </Card>
     </div>

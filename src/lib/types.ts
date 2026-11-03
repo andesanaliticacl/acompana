@@ -79,7 +79,7 @@ export interface DB {
   asignaciones: Asignacion[];
   pagos: Pago[];
   movimientos: Movimiento[];
-  ajustes: { nombreDuena: string };
+  ajustes: { nombreDuena: string; ocultarPasos?: boolean };
 }
 
 export const RASGOS: { nombre: string; tono: 'bueno' | 'neutro' | 'ojo' }[] = [

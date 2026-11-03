@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle2, ChevronRight, Plus, Sparkles, Wallet } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ChevronRight, Plus, Sparkles, Wallet, X } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Asignacion, Estado } from '../lib/types';
 import { ESTADOS } from '../lib/types';
@@ -12,7 +12,7 @@ import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
 import type { Tab } from '../App';
 
 export function Hoy({ ir }: { ir: (t: Tab) => void }) {
-  const { db, upsert, reiniciar } = useStore();
+  const { db, upsert, reiniciar, setAjustes } = useStore();
   const [modal, setModal] = useState<AsignarInicial | null>(null);
   const [verTodos, setVerTodos] = useState(false);
   const h = hoy();
@@ -44,9 +44,14 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
       </div>
 
       {/* App vacía: primeros pasos */}
-      {(db.personas.length === 0 || db.cuidadoras.length === 0) && (
+      {!db.ajustes.ocultarPasos && (db.personas.length === 0 || db.cuidadoras.length === 0) && (
         <Card className="mb-4">
-          <h2 className="font-semibold">Primeros pasos</h2>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-semibold">Primeros pasos</h2>
+            <button onClick={() => setAjustes({ ocultarPasos: true })} className="-m-1.5 rounded-full p-2 text-suave transition hover:bg-hover active:scale-90" aria-label="Ocultar primeros pasos" title="Ocultar">
+              <X size={18} />
+            </button>
+          </div>
           <p className="mt-0.5 text-sm text-suave">Para empezar a usar la app, completa estos datos en orden:</p>
           <ol className="mt-3 space-y-2">
             {[
