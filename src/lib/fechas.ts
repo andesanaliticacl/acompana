@@ -20,6 +20,16 @@ export const lunesDe = (s: string) => {
 export const diasSemana = (lunes: string) => Array.from({ length: 7 }, (_, i) => sumarDias(lunes, i));
 export const diasEntre = (a: string, b: string) => Math.round((parse(b).getTime() - parse(a).getTime()) / 86400000);
 
+/** Quincena de una fecha: del 1 al 15, o del 16 a fin de mes. */
+export const quincenaDe = (s: string) => {
+  const d = parse(s);
+  const primera = d.getDate() <= 15;
+  const desde = iso(new Date(d.getFullYear(), d.getMonth(), primera ? 1 : 16));
+  const hasta = iso(primera ? new Date(d.getFullYear(), d.getMonth(), 15) : new Date(d.getFullYear(), d.getMonth() + 1, 0));
+  return { desde, hasta, clave: `q:${desde}` };
+};
+export const moverQuincena = (desde: string, n: number) => quincenaDe(sumarDias(desde, n > 0 ? 16 : -1)).desde;
+
 export const DIAS_CORTOS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -30,6 +40,14 @@ export const fmtLargo = (s: string) =>
 export const fmtCorto = (s: string) =>
   parse(s).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' }).replace(/\./g, '');
 export const fmtMes = (s: string) => cap(parse(s).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' }));
+
+/** Texto de un período de pago: "1–15 nov" o "3 nov". */
+export const fmtPeriodo = (periodo: string) => {
+  const [tipo, fecha] = periodo.split(':');
+  if (tipo === 'd') return fmtCorto(fecha);
+  const q = quincenaDe(fecha);
+  return `${Number(q.desde.slice(8))}–${fmtCorto(q.hasta)}`;
+};
 
 export const edad = (nac: string) => {
   const n = parse(nac);

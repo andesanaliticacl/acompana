@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { AlertTriangle, Building2, CalendarDays, Check, ChevronLeft, ChevronRight, Clock, Copy, Download, Plus, Search, Users, X } from 'lucide-react';
-import { useStore } from '../state/store';
-import type { Asignacion, Persona, Turno } from '../lib/types';
-import { ESTADOS } from '../lib/types';
-import { DIAS_CORTOS, diasSemana, fmtCorto, fmtDia, fmtHora, fmtHoras, fmtLargo, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
-import { asignacionesSemana, clienteDe, descargarCSV, horario, horasDe, huecos, personaDe, personasActivas, pisoDe, requeridasPersona, requeridasTurno, resumenSemana } from '../lib/calculos';
+import { useDbSede, useStore } from '../state/store';
+import type { Area, Asignacion, Persona, Turno } from '../lib/types';
+import { ESTADOS, nombreArea } from '../lib/types';
+import { DIAS_CORTOS, diasSemana, fmtCorto, fmtDia, fmtHora, fmtLargo, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
+import { asignacionesSemana, clienteDe, descargarCSV, enSede, horario, horasDe, huecos, nombreSede, personaDe, personasActivas, pisoDe, requeridasPersona, requeridasTurno, resumenSemana, sedeActiva, sedeDeAsignacion, vistaSede } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
 import { Avatar, Boton, MenuMas, Titulo, TurnoIcono, cx, inputCls, primerNombre } from '../components/ui';
 import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
@@ -20,7 +20,8 @@ const leerVista = (): Vista => {
 };
 
 export function Semana({ param }: { param?: string }) {
-  const { db, upsertMuchos } = useStore();
+  const { db: todo, upsertMuchos } = useStore();
+  const db = vistaSede(todo);
   const h = hoy();
   // param: una fecha (YYYY-MM-DD) o un texto para buscar en el día
   const esFecha = !!param && /^\d{4}-\d{2}-\d{2}$/.test(param);
@@ -49,24 +50,27 @@ export function Semana({ param }: { param?: string }) {
     const nuevas: Asignacion[] = [];
     for (const a of ant) {
       const f = sumarDias(a.fecha, 7);
-      if (delaSemana.some((x) => x.fecha === f && x.cuidadoraId === a.cuidadoraId)) continue;
+      if (asignacionesSemana(todo, lunes).some((x) => x.fecha === f && x.cuidadoraId === a.cuidadoraId)) continue;
       const t = db.turnos.find((x) => x.id === a.turnoId);
       const normal = t && horario(t, a.fecha);
       const horas = t && normal && normal.inicio === a.inicio && normal.fin === a.fin ? horario(t, f) : { inicio: a.inicio, fin: a.fin };
-      nuevas.push({ ...a, ...horas, id: uid(), fecha: f, estado: 'programado', nota: '' });
+      nuevas.push({ ...a, ...horas, id: uid(), fecha: f, estado: 'programado', nota: '', horasExtra: undefined });
     }
     if (!nuevas.length) return alert('No hay nada que copiar: esta semana ya tiene a las mismas cuidadoras.');
     if (confirm(`Se copiarán ${nuevas.length} asignaciones de la semana anterior. ¿Continuar?`)) upsertMuchos('asignaciones', nuevas);
   };
 
   const exportar = () => {
-    const filas: (string | number)[][] = [['Fecha', 'Turno', 'Piso', 'Residente', 'Cliente', 'Cuidadora', 'Desde', 'Hasta', 'Horas', 'Estado', 'Nota']];
-    for (const a of [...delaSemana].sort((x, y) => (x.fecha + x.inicio).localeCompare(y.fecha + y.inicio))) {
+    // El Excel trae todas las sedes, con su columna, para poder filtrarlas allá
+    const filas: (string | number)[][] = [['Sede', 'Fecha', 'Turno', 'Área', 'Piso', 'Residente', 'Cliente', 'Personal', 'Desde', 'Hasta', 'Horas', 'Horas extra', 'Estado', 'Nota']];
+    const orden = (a: Asignacion) => (nombreSede(todo, sedeDeAsignacion(todo, a)) ?? '') + a.fecha + a.inicio;
+    for (const a of [...asignacionesSemana(todo, lunes)].sort((x, y) => orden(x).localeCompare(orden(y)))) {
+      const c = todo.cuidadoras.find((x) => x.id === a.cuidadoraId);
       filas.push([
-        a.fecha, db.turnos.find((t) => t.id === a.turnoId)?.nombre ?? '',
-        db.pisos.find((p) => p.id === pisoDe(db, a))?.nombre ?? '', personaDe(db, a)?.nombre ?? '', clienteDe(db, a)?.nombre ?? '',
-        db.cuidadoras.find((c) => c.id === a.cuidadoraId)?.nombre ?? '',
-        a.inicio, a.fin, String(horasDe(a)).replace('.', ','), ESTADOS[a.estado].label, a.nota ?? '',
+        nombreSede(todo, sedeDeAsignacion(todo, a)) ?? '', a.fecha, todo.turnos.find((t) => t.id === a.turnoId)?.nombre ?? '', nombreArea(c?.area),
+        todo.pisos.find((p) => p.id === pisoDe(todo, a))?.nombre ?? '', personaDe(todo, a)?.nombre ?? '', clienteDe(todo, a)?.nombre ?? '',
+        c?.nombre ?? '',
+        a.inicio, a.fin, String(horasDe(a)).replace('.', ','), String(a.horasExtra ?? 0).replace('.', ','), ESTADOS[a.estado].label, a.nota ?? '',
       ]);
     }
     descargarCSV(`turnos-semana-${lunes}.csv`, filas);
@@ -181,7 +185,7 @@ const leerAgrupar = (): Agrupar => {
 function VistaDia({ fecha, filtro, onFiltro, agrupar, mostrarBuscar, onCerrarBuscar, onModal }: {
   fecha: string; filtro: string; onFiltro: (v: string) => void; agrupar: Agrupar; mostrarBuscar: boolean; onCerrarBuscar: () => void; onModal: (i: AsignarInicial) => void;
 }) {
-  const { db } = useStore();
+  const db = useDbSede();
   const delDia = db.asignaciones.filter((a) => a.fecha === fecha);
   const turnos = db.turnos;
   const nombreCuidadora = (a: Asignacion) => db.cuidadoras.find((c) => c.id === a.cuidadoraId)?.nombre ?? '';
@@ -194,7 +198,10 @@ function VistaDia({ fecha, filtro, onFiltro, agrupar, mostrarBuscar, onCerrarBus
     .filter((p) =>
       coincide(p.nombre, db.clientes.find((c) => c.id === p.clienteId)?.nombre, ...delDia.filter((a) => a.personaId === p.id).map(nombreCuidadora)),
     );
-  const sueltas = delDia.filter((a) => !db.personas.some((p) => p.id === a.personaId) && coincide(nombreCuidadora(a)));
+  const areaDe = (a: Asignacion) => db.cuidadoras.find((c) => c.id === a.cuidadoraId)?.area ?? 'piso';
+  const sueltas = delDia.filter((a) => !db.personas.some((p) => p.id === a.personaId) && areaDe(a) === 'piso' && coincide(nombreCuidadora(a)));
+  // Cocina y Aseo no atienden residentes: una fila por área
+  const otrasAreas: Area[] = (['cocina', 'aseo'] as Area[]).filter((x) => coincide(nombreArea(x), ...delDia.filter((a) => !a.personaId && areaDe(a) === x).map(nombreCuidadora)));
 
   const grupos =
     agrupar === 'piso'
@@ -266,8 +273,28 @@ function VistaDia({ fecha, filtro, onFiltro, agrupar, mostrarBuscar, onCerrarBus
         )}
 
         {residentes.length === 0 && sueltas.length === 0 && (
-          <p className="px-4 py-8 text-center text-sm text-suave">{q ? `Nada coincide con “${filtro}” este día.` : 'No hay residentes registrados.'}</p>
+          <p className="border-b border-linea px-4 py-6 text-center text-sm text-suave">{q ? `Ningún residente coincide con “${filtro}” este día.` : 'No hay residentes en esta sede.'}</p>
         )}
+
+        {otrasAreas.length > 0 && (
+          <div className="border-b border-linea bg-fondo px-3 py-1.5 text-xs font-semibold tracking-wide text-suave uppercase">Otras áreas</div>
+        )}
+        {otrasAreas.map((x) => (
+          <div key={x} className="grid border-b border-linea last:border-b-0" style={{ gridTemplateColumns: columnas }}>
+            <div className="flex items-center px-3 py-2 text-sm font-medium">{nombreArea(x)}</div>
+            {turnos.map((t) => (
+              <div key={t.id} className="space-y-1 border-l border-linea p-1.5">
+                {delDia.filter((a) => a.turnoId === t.id && !a.personaId && areaDe(a) === x).map((a) => <ChipCuidadora key={a.id} a={a} onClick={() => onModal({ fecha, id: a.id })} />)}
+                <button
+                  onClick={() => onModal({ fecha, turnoId: t.id, area: x })}
+                  className="flex w-full items-center gap-1 rounded-md px-2 py-1.5 text-xs text-suave hover:bg-hover hover:text-tinta"
+                >
+                  <Plus size={13} /> Asignar
+                </button>
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
 
     </div>
@@ -304,7 +331,7 @@ function CeldaResidente({ p, t, fecha, items, onModal }: { p: Persona; t: Turno;
 }
 
 function ChipCuidadora({ a, onClick }: { a: Asignacion; onClick: () => void }) {
-  const { db } = useStore();
+  const db = useDbSede();
   const c = db.cuidadoras.find((x) => x.id === a.cuidadoraId);
   if (!c) return null;
   return (
@@ -346,15 +373,15 @@ function IconoEstado({ estado }: { estado: Asignacion['estado'] }) {
 /* ───────────── Semana por cuidadora: una fila por persona, como planilla ───────────── */
 
 function VistaCuidadoras({ dias, lunes, delaSemana, onModal }: { dias: string[]; lunes: string; delaSemana: Asignacion[]; onModal: (i: AsignarInicial) => void }) {
-  const { db } = useStore();
+  const db = useDbSede();
   const h = hoy();
   const primerTurno = db.turnos[0]?.id;
   const cuenta = (cid: string) => delaSemana.filter((x) => x.cuidadoraId === cid && x.turnoId === primerTurno).length;
   const filas = db.cuidadoras
-    .filter((c) => c.activa || delaSemana.some((a) => a.cuidadoraId === c.id))
+    .filter((c) => (c.activa && enSede(c.sedeId, sedeActiva(db))) || delaSemana.some((a) => a.cuidadoraId === c.id))
     .map((c) => ({ c, r: resumenSemana(db, c.id, lunes) }))
     // agrupa: primero quienes hacen más turnos de día, luego las de noche
-    .sort((a, b) => cuenta(b.c.id) - cuenta(a.c.id) || b.r.horas - a.r.horas || a.c.nombre.localeCompare(b.c.nombre));
+    .sort((a, b) => cuenta(b.c.id) - cuenta(a.c.id) || b.r.pagables - a.r.pagables || a.c.nombre.localeCompare(b.c.nombre));
 
   return (
     <div>
@@ -370,7 +397,7 @@ function VistaCuidadoras({ dias, lunes, delaSemana, onModal }: { dias: string[];
                     <div className={cx('font-semibold', d === h && 'text-primario')}>{Number(d.slice(8))}</div>
                   </th>
                 ))}
-                <th className="w-20 border-b border-l border-linea px-2 py-2 text-right text-xs font-medium text-suave">Horas</th>
+                <th className="w-20 border-b border-l border-linea px-2 py-2 text-right text-xs font-medium text-suave">Turnos</th>
               </tr>
             </thead>
             <tbody>
@@ -412,7 +439,7 @@ function VistaCuidadoras({ dias, lunes, delaSemana, onModal }: { dias: string[];
                       </td>
                     );
                   })}
-                  <td className="border-b border-l border-linea px-2 text-right font-semibold tabular-nums">{r.horas ? fmtHoras(r.horas) : <span className="text-suave">—</span>}</td>
+                  <td className="border-b border-l border-linea px-2 text-right font-semibold tabular-nums">{r.pagables ? r.pagables : <span className="text-suave">—</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -423,7 +450,7 @@ function VistaCuidadoras({ dias, lunes, delaSemana, onModal }: { dias: string[];
                     <span className="flex items-center gap-1.5"><TurnoIcono icono={t.icono} size={13} /> Cobertura {t.nombre.toLowerCase()}</span>
                   </td>
                   {dias.map((d) => {
-                    const hay = delaSemana.filter((a) => a.fecha === d && a.turnoId === t.id && a.estado !== 'falto').length;
+                    const hay = delaSemana.filter((a) => a.fecha === d && a.turnoId === t.id && a.personaId && a.estado !== 'falto').length;
                     return (
                       <td key={d} className="border-b border-l border-linea p-1 text-center">
                         <Cobertura hay={hay} req={requeridasTurno(db, t)} />

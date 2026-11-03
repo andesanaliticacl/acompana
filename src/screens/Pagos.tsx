@@ -2,54 +2,75 @@ import { useState } from 'react';
 import { AlertTriangle, Check, ChevronDown, ChevronLeft, ChevronRight, Download, MessageCircle, Undo2 } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Pago } from '../lib/types';
-import { clp, diasEntre, fmtCorto, fmtDia, fmtHoras, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
-import { descargarCSV, linkWhatsApp, resumenSemana } from '../lib/calculos';
+import { nombreArea } from '../lib/types';
+import { clp, fmtDia, fmtHoras, fmtPeriodo, hoy, moverQuincena, quincenaDe, sumarDias, uid } from '../lib/fechas';
+import { descargarCSV, linkWhatsApp, nombreSede, resumenPeriodo } from '../lib/calculos';
 import { vibrar } from '../lib/tacto';
-import { Avatar, Boton, Card, MenuMas, Titulo, cx, inputCls, primerNombre } from '../components/ui';
+import { Avatar, Boton, Card, MenuMas, Segmentado, Titulo, cx, inputCls, primerNombre } from '../components/ui';
 
+type Modo = 'quincena' | 'diario';
+
+/** Se paga por turno más horas extra: quincenal, y día a día para el personal de emergencia. */
 export function Pagos() {
   const { db, upsert } = useStore();
   const h = hoy();
-  const [lunes, setLunes] = useState(lunesDe(h));
+  const [modo, setModo] = useState<Modo>('quincena');
+  const [quincena, setQuincena] = useState(quincenaDe(h).desde);
+  const [dia, setDia] = useState(h);
   const [abierto, setAbierto] = useState<string | null>(null);
-  const domingo = sumarDias(lunes, 6);
+
+  const q = quincenaDe(quincena);
+  const desde = modo === 'quincena' ? q.desde : dia;
+  const hasta = modo === 'quincena' ? q.hasta : dia;
+  const clave = modo === 'quincena' ? q.clave : `d:${dia}`;
+  const mover = (n: number) => (modo === 'quincena' ? setQuincena(moverQuincena(quincena, n)) : setDia(sumarDias(dia, n)));
 
   const filas = db.cuidadoras
-    .map((c) => ({ c, r: resumenSemana(db, c.id, lunes) }))
-    .filter((x) => x.r.turnos > 0 || x.r.pagado);
-  const total = filas.reduce((s, x) => s + (x.r.pagado ? x.r.pago!.monto : x.r.total), 0);
+    .filter((c) => (modo === 'diario' ? c.emergencia : !c.emergencia))
+    .map((c) => ({ c, r: resumenPeriodo(db, c.id, desde, hasta, clave) }))
+    .filter((x) => x.r.turnos > 0 || x.r.pagado)
+    .sort((a, b) => (nombreSede(db, a.c.sedeId) ?? '').localeCompare(nombreSede(db, b.c.sedeId) ?? '') || a.c.nombre.localeCompare(b.c.nombre));
+  const monto = (r: (typeof filas)[number]['r']) => (r.pagado ? r.pago!.monto : r.total);
+  const total = filas.reduce((s, x) => s + monto(x.r), 0);
   const pagado = filas.reduce((s, x) => s + (x.r.pagado ? x.r.pago!.monto : 0), 0);
-  const horas = filas.reduce((s, x) => s + x.r.horas, 0);
-  const falta = diasEntre(h, domingo);
 
   const guardarPago = (cid: string, p: Partial<Pago>) => {
-    const r = resumenSemana(db, cid, lunes);
-    const base: Pago = r.pago ?? { id: uid(), cuidadoraId: cid, semana: lunes, ajuste: 0, monto: 0, pagadoEl: null };
+    const r = resumenPeriodo(db, cid, desde, hasta, clave);
+    const base: Pago = r.pago ?? { id: uid(), cuidadoraId: cid, periodo: clave, ajuste: 0, monto: 0, pagadoEl: null };
     upsert('pagos', { ...base, ...p });
   };
 
   const exportar = () => {
-    const out: (string | number)[][] = [['Cuidadora', 'Horas', 'Valor hora', 'Subtotal', 'Bono/Descuento', 'Total', 'Estado', 'Pagado el']];
+    const out: (string | number)[][] = [['Sede', 'Área', 'Personal', 'Turnos', 'Valor turno', 'Horas extra', 'Valor hora extra', 'Subtotal', 'Bono/Descuento', 'Total', 'Estado', 'Pagado el']];
     for (const { c, r } of filas) {
-      out.push([c.nombre, String(r.horas).replace('.', ','), r.tarifa, r.subtotal, r.ajuste, r.pagado ? r.pago!.monto : r.total, r.pagado ? 'Pagado' : 'Pendiente', r.pago?.pagadoEl ?? '']);
+      out.push([
+        nombreSede(db, c.sedeId) ?? 'Todas', nombreArea(c.area), c.nombre, r.pagables, r.valor, String(r.horasExtra).replace('.', ','), r.valorExtra,
+        r.subtotal, r.ajuste, monto(r), r.pagado ? 'Pagado' : 'Pendiente', r.pago?.pagadoEl ?? '',
+      ]);
     }
-    out.push(['TOTAL', String(horas).replace('.', ','), '', '', '', total, '', '']);
-    descargarCSV(`pagos-semana-${lunes}.csv`, out);
+    out.push(['TOTAL', '', '', filas.reduce((s, x) => s + x.r.pagables, 0), '', '', '', '', '', total, '', '']);
+    descargarCSV(`pagos-${modo === 'quincena' ? `quincena-${q.desde}` : `emergencia-${dia}`}.csv`, out);
   };
 
   return (
     <div>
       <Titulo titulo="Pagos" />
 
-      {/* Semana + Más */}
+      <div className="mb-3">
+        <Segmentado<Modo>
+          valor={modo}
+          onChange={(m) => { setModo(m); setAbierto(null); }}
+          opciones={[{ id: 'quincena', label: 'Quincenal' }, { id: 'diario', label: 'Emergencia (diario)' }]}
+        />
+      </div>
+
+      {/* Período + Más */}
       <div className="mb-4 flex items-center gap-2">
-        <button onClick={() => setLunes(sumarDias(lunes, -7))} className="rounded-lg border border-linea bg-superficie p-2 hover:bg-fondo" aria-label="Semana anterior">
+        <button onClick={() => mover(-1)} className="rounded-lg border border-linea bg-superficie p-2 hover:bg-fondo" aria-label="Anterior">
           <ChevronLeft size={18} />
         </button>
-        <div className="flex-1 text-center font-semibold">
-          {fmtCorto(lunes)} – {fmtCorto(domingo)}
-        </div>
-        <button onClick={() => setLunes(sumarDias(lunes, 7))} className="rounded-lg border border-linea bg-superficie p-2 hover:bg-fondo" aria-label="Semana siguiente">
+        <div className="flex-1 text-center font-semibold">{modo === 'quincena' ? fmtPeriodo(clave) : fmtDia(dia)}</div>
+        <button onClick={() => mover(1)} className="rounded-lg border border-linea bg-superficie p-2 hover:bg-fondo" aria-label="Siguiente">
           <ChevronRight size={18} />
         </button>
         <MenuMas label="" items={[{ label: 'Descargar Excel', icon: <Download size={16} />, onClick: exportar }]} />
@@ -57,20 +78,20 @@ export function Pagos() {
 
       {/* 1. Lo que falta pagar */}
       <div data-tour="pagos-resumen" className="mb-4 rounded-xl border border-linea bg-superficie p-4">
-        <div className="text-sm text-suave">Por pagar el {fmtDia(domingo).toLowerCase()}</div>
+        <div className="text-sm text-suave">{modo === 'quincena' ? 'Por pagar esta quincena' : 'Por pagar este día'}</div>
         <div className="text-3xl font-semibold tracking-tight text-primario tabular-nums">{clp(total - pagado)}</div>
-        <div className="mt-1 text-sm text-suave">
-          Total {clp(total)} · Pagado {clp(pagado)}
-          {falta === 0 && <span className="font-medium text-tinta"> · Hoy es día de pago</span>}
-        </div>
+        <div className="mt-1 text-sm text-suave">Total {clp(total)} · Pagado {clp(pagado)}</div>
       </div>
 
-      {/* 2. Una fila por cuidadora; el detalle se abre al tocarla */}
+      {/* 2. Una fila por persona; el detalle se abre al tocarla */}
       <Card className="!p-0">
-        {filas.length === 0 && <p className="px-4 py-8 text-center text-sm text-suave">No hay turnos esta semana.</p>}
+        {filas.length === 0 && (
+          <p className="px-4 py-8 text-center text-sm text-suave">
+            {modo === 'quincena' ? 'No hay turnos en esta quincena.' : 'Nadie de emergencia trabajó este día.'}
+          </p>
+        )}
         <ul className="divide-y divide-linea">
           {filas.map(({ c, r }) => {
-            const monto = r.pagado ? r.pago!.monto : r.total;
             const abierta = abierto === c.id;
             return (
               <li key={c.id}>
@@ -80,13 +101,13 @@ export function Pagos() {
                     <span className="min-w-0">
                       <span className="block truncate font-medium"><span className="sm:hidden">{primerNombre(c.nombre)}</span><span className="hidden sm:inline">{c.nombre}</span></span>
                       <span className="flex items-center gap-1 text-sm text-suave">
-                        {fmtHoras(r.horas)}
-                        {r.sinConfirmar > 0 && !r.pagado && <AlertTriangle size={13} className="text-aviso" />}
-                        <ChevronDown size={14} className={cx('transition', abierta && 'rotate-180')} />
+                        <span className="truncate">{r.pagables} turno{r.pagables === 1 ? '' : 's'}{r.horasExtra ? ` + ${fmtHoras(r.horasExtra)} extra` : ''}</span>
+                        {r.sinConfirmar > 0 && !r.pagado && <AlertTriangle size={13} className="shrink-0 text-aviso" />}
+                        <ChevronDown size={14} className={cx('shrink-0 transition', abierta && 'rotate-180')} />
                       </span>
                     </span>
                   </button>
-                  <span className="shrink-0 text-right font-semibold tabular-nums">{clp(monto)}</span>
+                  <span className="shrink-0 text-right font-semibold tabular-nums">{clp(monto(r))}</span>
                   {r.pagado ? (
                     <span className="inline-flex w-20 shrink-0 items-center justify-center gap-1 rounded-md bg-ok-50 py-1.5 text-xs font-medium text-ok">
                       <Check size={13} strokeWidth={3} /> Pagado
@@ -101,10 +122,14 @@ export function Pagos() {
                 {abierta && (
                   <div className="anim-entrar space-y-3 bg-fondo px-4 py-3 text-sm">
                     <div className="text-suave">
-                      {r.turnos} turnos · {fmtHoras(r.horas)} × {clp(r.tarifa)} = {clp(r.subtotal)}
+                      {[nombreSede(db, c.sedeId) ?? 'Todas las sedes', nombreArea(c.area)].join(' · ')}
+                      <br />
+                      {r.pagables} × {clp(r.valor)}
+                      {r.horasExtra > 0 && ` + ${fmtHoras(r.horasExtra)} extra × ${clp(r.valorExtra)}`} = {clp(r.subtotal)}
                       {r.faltas > 0 && <span className="text-alerta"> · {r.faltas} falta{r.faltas > 1 ? 's' : ''}</span>}
                       {r.atrasos > 0 && <span className="text-aviso"> · {r.atrasos} atraso{r.atrasos > 1 ? 's' : ''}</span>}
                     </div>
+                    {r.porVenir > 0 && !r.pagado && <div className="text-suave">Incluye {r.porVenir} turno{r.porVenir > 1 ? 's' : ''} por venir.</div>}
                     {r.sinConfirmar > 0 && !r.pagado && (
                       <div className="flex items-center gap-1.5 text-aviso">
                         <AlertTriangle size={14} /> {r.sinConfirmar} turno{r.sinConfirmar > 1 ? 's' : ''} sin marcar asistencia
@@ -126,7 +151,7 @@ export function Pagos() {
                       {r.pagado && (
                         <>
                           <a
-                            href={linkWhatsApp(c.telefono, `Hola ${primerNombre(c.nombre)}, te transferí ${clp(r.pago!.monto)} por ${fmtHoras(r.horas)} de la semana ${fmtCorto(lunes)} al ${fmtCorto(domingo)}. ¡Gracias por tu trabajo!`)}
+                            href={linkWhatsApp(c.telefono, `Hola ${primerNombre(c.nombre)}, te transferí ${clp(r.pago!.monto)} por ${r.pagables} turno${r.pagables === 1 ? '' : 's'}${r.horasExtra ? ` y ${fmtHoras(r.horasExtra)} extra` : ''} (${fmtPeriodo(clave)}). ¡Gracias por tu trabajo!`)}
                             target="_blank"
                             rel="noreferrer"
                           >

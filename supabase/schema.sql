@@ -9,9 +9,16 @@ create table agencias (
   created_at timestamptz not null default now()
 );
 
+create table sedes (
+  id uuid primary key default gen_random_uuid(),
+  agencia_id uuid not null references agencias(id) on delete cascade,
+  nombre text not null
+);
+
 create table cuidadoras (
   id uuid primary key default gen_random_uuid(),
   agencia_id uuid not null references agencias(id) on delete cascade,
+  sede_id uuid references sedes(id) on delete set null,
   nombre text not null,
   fecha_nacimiento date,
   experiencia int not null default 0,
@@ -19,7 +26,11 @@ create table cuidadoras (
   descripcion text,
   rasgos text[] not null default '{}',
   valoracion smallint not null default 3 check (valoracion between 1 and 5),
-  tarifa_hora int not null default 0,          -- CLP
+  valor_turno int not null default 0,          -- CLP: se paga por turno
+  valor_hora_extra int not null default 0,     -- CLP
+  area text not null default 'piso' check (area in ('piso', 'cocina', 'aseo')),
+  emergencia boolean not null default false,   -- se le paga por día
+  particular boolean not null default false,
   color text not null default 'rosa',
   activa boolean not null default true,
   notas text,                                  -- privadas de la dueña
@@ -42,6 +53,7 @@ create table turnos (
 create table pisos (
   id uuid primary key default gen_random_uuid(),
   agencia_id uuid not null references agencias(id) on delete cascade,
+  sede_id uuid references sedes(id) on delete set null,
   nombre text not null,
   orden smallint not null default 0
 );
@@ -49,6 +61,7 @@ create table pisos (
 create table clientes (                        -- apoderado que contrata y paga
   id uuid primary key default gen_random_uuid(),
   agencia_id uuid not null references agencias(id) on delete cascade,
+  sede_id uuid references sedes(id) on delete set null,
   nombre text not null,
   telefono text,
   cobro_semanal int not null default 0,
@@ -72,6 +85,7 @@ create type estado_turno as enum ('programado', 'asistio', 'atraso', 'falto');
 create table asignaciones (
   id uuid primary key default gen_random_uuid(),
   agencia_id uuid not null references agencias(id) on delete cascade,
+  sede_id uuid references sedes(id) on delete set null,
   fecha date not null,
   turno_id uuid not null references turnos(id),
   persona_id uuid references personas(id) on delete set null,
@@ -80,6 +94,7 @@ create table asignaciones (
   inicio time not null,
   fin time not null,
   estado estado_turno not null default 'programado',
+  horas_extra numeric,
   nota text,
   created_at timestamptz not null default now()
 );
@@ -89,16 +104,17 @@ create table pagos (
   id uuid primary key default gen_random_uuid(),
   agencia_id uuid not null references agencias(id) on delete cascade,
   cuidadora_id uuid not null references cuidadoras(id),
-  semana date not null,                        -- lunes de la semana pagada
+  periodo text not null,                       -- q:<inicio de quincena> o d:<dia> (emergencia)
   ajuste int not null default 0,               -- bono (+) / descuento (-)
   monto int not null default 0,
   pagado_el date,
-  unique (cuidadora_id, semana)
+  unique (cuidadora_id, periodo)
 );
 
 create table movimientos (
   id uuid primary key default gen_random_uuid(),
   agencia_id uuid not null references agencias(id) on delete cascade,
+  sede_id uuid references sedes(id) on delete set null,
   fecha date not null,
   tipo text not null check (tipo in ('ingreso', 'gasto')),
   concepto text not null,
@@ -110,6 +126,7 @@ create index on movimientos (agencia_id, fecha);
 
 -- RLS: cada dueña solo ve los datos de su agencia
 alter table agencias enable row level security;
+alter table sedes enable row level security;
 alter table cuidadoras enable row level security;
 alter table turnos enable row level security;
 alter table pisos enable row level security;
@@ -121,6 +138,9 @@ alter table movimientos enable row level security;
 
 create policy "duena ve su agencia" on agencias for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
 
+create policy "por agencia" on sedes for all
+  using (agencia_id in (select id from agencias where owner_id = auth.uid()))
+  with check (agencia_id in (select id from agencias where owner_id = auth.uid()));
 create policy "por agencia" on cuidadoras for all
   using (agencia_id in (select id from agencias where owner_id = auth.uid()))
   with check (agencia_id in (select id from agencias where owner_id = auth.uid()));

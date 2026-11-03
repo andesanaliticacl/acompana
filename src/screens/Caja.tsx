@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { BarChart3, CalendarDays, ChevronLeft, ChevronRight, Download, Plus, Trash2 } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Movimiento } from '../lib/types';
-import { clp, fmtCorto, fmtDia, fmtMes, hoy, iso, lunesDe, parse, sumarDias, uid } from '../lib/fechas';
-import { descargarCSV } from '../lib/calculos';
+import { clp, fmtCorto, fmtDia, fmtMes, fmtPeriodo, hoy, iso, lunesDe, parse, sumarDias, uid } from '../lib/fechas';
+import { descargarCSV, nombreSede, sedeActiva } from '../lib/calculos';
 import { Boton, Campo, Card, MenuMas, Modal, Segmentado, Titulo, cx, inputCls } from '../components/ui';
 
 interface Linea {
@@ -14,6 +14,7 @@ interface Linea {
   detalle?: string;
   monto: number;
   auto?: boolean; // viene de un pago a cuidadora
+  sede?: string;
   mov?: Movimiento;
 }
 
@@ -38,10 +39,12 @@ export function Caja() {
   const lineas: Linea[] = [
     ...db.movimientos.filter((m) => enMes(m.fecha)).map((m) => ({
       id: m.id, fecha: m.fecha, tipo: m.tipo, concepto: m.concepto, detalle: [m.cliente, m.medio === 'efectivo' ? 'Efectivo' : 'Transferencia'].filter(Boolean).join(' · '), monto: m.monto, mov: m,
+      sede: nombreSede(db, m.sedeId ?? db.clientes.find((c) => c.nombre === m.cliente)?.sedeId),
     })),
     ...db.pagos.filter((p) => p.pagadoEl && enMes(p.pagadoEl)).map((p) => ({
       id: p.id, fecha: p.pagadoEl!, tipo: 'gasto' as const, concepto: `Pago a ${db.cuidadoras.find((c) => c.id === p.cuidadoraId)?.nombre ?? 'cuidadora'}`,
-      detalle: `Semana del ${fmtCorto(p.semana)}`, monto: p.monto, auto: true,
+      detalle: fmtPeriodo(p.periodo), monto: p.monto, auto: true,
+      sede: nombreSede(db, db.cuidadoras.find((c) => c.id === p.cuidadoraId)?.sedeId),
     })),
   ].sort((a, b) => b.fecha.localeCompare(a.fecha) || a.tipo.localeCompare(b.tipo));
 
@@ -66,12 +69,12 @@ export function Caja() {
   const maxSem = Math.max(1, ...porSemana.flatMap((s) => [s.ing, s.gas]));
 
   const clientes = [...new Set([...db.clientes.map((k) => k.nombre), ...db.movimientos.map((m) => m.cliente)].filter(Boolean))] as string[];
-  const nuevo = (tipo: Movimiento['tipo']): Movimiento => ({ id: uid(), fecha: h, tipo, concepto: tipo === 'ingreso' ? 'Cuidado semanal' : '', monto: 0, cliente: '', medio: 'transferencia' });
+  const nuevo = (tipo: Movimiento['tipo']): Movimiento => ({ id: uid(), fecha: h, tipo, concepto: tipo === 'ingreso' ? 'Cuidado semanal' : '', monto: 0, cliente: '', medio: 'transferencia', sedeId: sedeActiva(db) });
 
   const exportar = () => {
-    const out: (string | number)[][] = [['Fecha', 'Tipo', 'Concepto', 'Detalle', 'Monto']];
-    for (const l of [...lineas].reverse()) out.push([l.fecha, l.tipo, l.concepto, l.detalle ?? '', l.tipo === 'gasto' ? -l.monto : l.monto]);
-    out.push(['', '', '', 'SALDO', saldo]);
+    const out: (string | number)[][] = [['Sede', 'Fecha', 'Tipo', 'Concepto', 'Detalle', 'Monto']];
+    for (const l of [...lineas].reverse()) out.push([l.sede ?? '', l.fecha, l.tipo, l.concepto, l.detalle ?? '', l.tipo === 'gasto' ? -l.monto : l.monto]);
+    out.push(['', '', '', '', 'SALDO', saldo]);
     descargarCSV(`caja-${desde}-al-${hasta}.csv`, out);
   };
 
@@ -182,6 +185,7 @@ function Kpi({ label, valor, color }: { label: string; valor: number; color: str
 
 
 function FormMovimiento({ inicial, clientes, esNuevo, onClose, onGuardar, onBorrar }: { inicial: Movimiento; clientes: string[]; esNuevo: boolean; onClose: () => void; onGuardar: (m: Movimiento) => void; onBorrar: (id: string) => void }) {
+  const { db } = useStore();
   const [f, setF] = useState<Movimiento>(inicial);
   const set = (p: Partial<Movimiento>) => setF((x) => ({ ...x, ...p }));
   return (
@@ -211,6 +215,12 @@ function FormMovimiento({ inicial, clientes, esNuevo, onClose, onGuardar, onBorr
         </div>
         <Campo label="Concepto">
           <input className={inputCls} value={f.concepto} onChange={(e) => set({ concepto: e.target.value })} placeholder={f.tipo === 'ingreso' ? 'Cuidado semanal' : 'Ej: insumos, movilización'} />
+        </Campo>
+        <Campo label="Sede">
+          <select className={inputCls} value={f.sedeId ?? ''} onChange={(e) => set({ sedeId: e.target.value || undefined })}>
+            {db.sedes.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+            <option value="">Sin sede</option>
+          </select>
         </Campo>
         {f.tipo === 'ingreso' && (
           <Campo label="Familia / cliente">

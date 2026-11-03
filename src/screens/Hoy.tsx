@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { AlertTriangle, CheckCircle2, ChevronRight, Plus, Sparkles, Wallet, X } from 'lucide-react';
-import { useStore } from '../state/store';
+import { useDbSede, useStore } from '../state/store';
 import type { Asignacion, Estado } from '../lib/types';
 import { ESTADOS } from '../lib/types';
-import { clp, fmtDia, fmtHora, fmtLargo, hoy, lunesDe } from '../lib/fechas';
-import { horario, huecos, personaDe, pisoDe, requeridasTurno, resumenSemana } from '../lib/calculos';
+import { clp, fmtDia, fmtHora, fmtLargo, hoy } from '../lib/fechas';
+import { enSede, horario, huecos, personaDe, pisoDe, porPagarQuincena, requeridasTurno, sedeActiva, vistaSede } from '../lib/calculos';
+import { nombreArea } from '../lib/types';
 import { PALETA } from '../lib/colores';
 import { Avatar, Boton, Card, TurnoIcono, cx } from '../components/ui';
 import { vibrar } from '../lib/tacto';
@@ -12,15 +13,12 @@ import { AsignarModal, type AsignarInicial } from '../components/AsignarModal';
 import type { Tab } from '../App';
 
 export function Hoy({ ir }: { ir: (t: Tab) => void }) {
-  const { db, upsert, reiniciar, setAjustes } = useStore();
+  const { db: todo, upsert, reiniciar, setAjustes } = useStore();
+  const db = vistaSede(todo);
   const [modal, setModal] = useState<AsignarInicial | null>(null);
   const [verTodos, setVerTodos] = useState(false);
   const h = hoy();
-  const lunes = lunesDe(h);
-  const aPagar = db.cuidadoras.reduce((s, c) => {
-    const r = resumenSemana(db, c.id, lunes);
-    return s + (r.pagado ? 0 : r.total);
-  }, 0);
+  const aPagar = porPagarQuincena(todo, todo.cuidadoras.filter((c) => enSede(c.sedeId, sedeActiva(todo))), h);
   const pendientes = huecos(db, h, 7);
   const faltanTotal = pendientes.reduce((s, p) => s + p.faltan, 0);
   const sinResidentes = db.turnos.every((t) => requeridasTurno(db, t) === 0);
@@ -44,7 +42,7 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
       </div>
 
       {/* App vacía: primeros pasos */}
-      {!db.ajustes.ocultarPasos && (db.personas.length === 0 || db.cuidadoras.length === 0) && (
+      {!todo.ajustes.ocultarPasos && (todo.personas.length === 0 || todo.cuidadoras.length === 0) && (
         <Card className="mb-4">
           <div className="flex items-center justify-between gap-2">
             <h2 className="font-semibold">Primeros pasos</h2>
@@ -55,10 +53,10 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
           <p className="mt-0.5 text-sm text-suave">Para empezar a usar la app, completa estos datos en orden:</p>
           <ol className="mt-3 space-y-2">
             {[
-              { hecho: db.pisos.length > 0, texto: 'Crea los pisos de la residencia', tab: 'ajustes' as Tab },
-              { hecho: db.personas.length > 0, texto: 'Agrega los clientes y sus residentes', tab: 'clientes' as Tab },
-              { hecho: db.cuidadoras.length > 0, texto: 'Agrega a las cuidadoras', tab: 'cuidadoras' as Tab },
-              { hecho: db.asignaciones.length > 0, texto: 'Asigna los turnos en el Calendario', tab: 'semana' as Tab },
+              { hecho: todo.pisos.length > 0, texto: 'Crea los pisos de cada sede', tab: 'ajustes' as Tab },
+              { hecho: todo.personas.length > 0, texto: 'Agrega los clientes y sus residentes', tab: 'clientes' as Tab },
+              { hecho: todo.cuidadoras.length > 0, texto: 'Agrega al personal', tab: 'cuidadoras' as Tab },
+              { hecho: todo.asignaciones.length > 0, texto: 'Asigna los turnos en el Calendario', tab: 'semana' as Tab },
             ].map((p, i) => (
               <li key={i}>
                 <button onClick={() => ir(p.tab)} className="flex w-full items-center gap-3 rounded-lg border border-linea px-3 py-2.5 text-left text-sm hover:bg-fondo">
@@ -74,7 +72,7 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
           <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-linea pt-3">
             <span className="text-sm text-suave">¿Quieres ver cómo funciona primero?</span>
             <Boton chico variante="suave" onClick={() => {
-              const hayDatos = db.cuidadoras.length + db.clientes.length + db.asignaciones.length + db.movimientos.length > 0;
+              const hayDatos = todo.cuidadoras.length + todo.clientes.length + todo.asignaciones.length + todo.movimientos.length > 0;
               if (!hayDatos || confirm("Se reemplazará lo que ya ingresaste por datos de ejemplo. ¿Continuar?")) reiniciar("demo");
             }}>
               <Sparkles size={15} /> Llenar con datos de ejemplo
@@ -86,7 +84,7 @@ export function Hoy({ ir }: { ir: (t: Tab) => void }) {
       {/* 1. Resumen en una sola tarjeta */}
       <div data-tour="hoy-resumen" className="mb-4 grid grid-cols-2 divide-x divide-linea overflow-hidden rounded-xl border border-linea bg-superficie">
         <button onClick={() => ir('pagos')} className="p-3.5 text-left hover:bg-fondo sm:p-4">
-          <div className="flex items-center gap-1.5 text-xs text-suave"><Wallet size={14} /> Pago del domingo</div>
+          <div className="flex items-center gap-1.5 text-xs text-suave"><Wallet size={14} /> Por pagar esta quincena</div>
           <div className="mt-0.5 text-lg font-semibold tabular-nums sm:text-xl">{clp(aPagar)}</div>
         </button>
         <div className={cx('p-3.5 sm:p-4', pendientes.length > 0 && 'bg-alerta-50')}>
@@ -153,14 +151,14 @@ function FilaTurno({
   onEstado?: (a: Asignacion, e: Estado) => void;
   conAsistencia?: boolean;
 }) {
-  const { db } = useStore();
+  const db = useDbSede();
   const t = db.turnos.find((x) => x.id === turnoId)!;
   const ordenPiso = (id?: string) => { const i = db.pisos.findIndex((p) => p.id === id); return i < 0 ? 99 : i; };
   const lista = db.asignaciones
     .filter((a) => a.fecha === fecha && a.turnoId === turnoId)
     .sort((a, b) => ordenPiso(pisoDe(db, a)) - ordenPiso(pisoDe(db, b)));
   const col = PALETA[t.color];
-  const hay = lista.filter((a) => a.estado !== "falto").length;
+  const hay = lista.filter((a) => a.personaId && a.estado !== "falto").length;
 
   return (
     <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start">
@@ -198,7 +196,7 @@ function FilaTurno({
                 <div className="min-w-0">
                   <div className={cx('truncate text-[15px] font-medium sm:text-sm', a.estado === 'falto' && 'text-suave line-through')}>{c.nombre}</div>
                   <div className="truncate text-xs text-suave">
-                    {[personaDe(db, a)?.nombre, db.pisos.find((p) => p.id === pisoDe(db, a))?.nombre].filter(Boolean).join(' · ')}
+                    {[personaDe(db, a)?.nombre ?? nombreArea(c.area), db.pisos.find((p) => p.id === pisoDe(db, a))?.nombre].filter(Boolean).join(' · ')}
                     {a.nota ? ` · ${a.nota}` : ''}
                   </div>
                 </div>

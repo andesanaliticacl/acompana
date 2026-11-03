@@ -18,9 +18,14 @@ export const PASOS: Paso[] = [
     texto: 'La app tiene 3 secciones: Turnos, Personas y Dinero. Cada una tiene dos pestañas arriba. Lo que no se usa siempre está guardado en "Más".',
   },
   {
+    tab: 'hoy', sel: 'sede',
+    titulo: 'Cambiar de sede',
+    texto: 'Con este botón eliges la sede. Hoy y el Calendario muestran solo lo de esa sede.',
+  },
+  {
     tab: 'hoy', sel: 'hoy-resumen',
     titulo: 'Resumen',
-    texto: 'Cuánto pagas el domingo y si falta cubrir algún turno en los próximos 7 días.',
+    texto: 'Cuánto falta pagar esta quincena y si falta cubrir algún turno en los próximos 7 días.',
   },
   {
     tab: 'hoy', sel: 'hoy-turnos',
@@ -30,7 +35,7 @@ export const PASOS: Paso[] = [
   {
     tab: 'hoy', sel: 'hoy-asignar',
     titulo: 'Asignar un turno',
-    texto: 'Eliges el día, el turno (Día o Noche), el residente y la cuidadora.',
+    texto: 'Eliges el día, el turno (Día o Noche), el área y la persona. Aquí también anotas las horas extra.',
   },
   {
     tab: 'semana', sel: 'cal-dias',
@@ -40,7 +45,7 @@ export const PASOS: Paso[] = [
   {
     tab: 'semana', sel: 'cal-tabla',
     titulo: 'Quién cuida a quién',
-    texto: 'Cada fila es un residente; las columnas son Día y Noche. Toca "Asignar" en rojo para poner una cuidadora, o un nombre para cambiarla.',
+    texto: 'Cada fila es un residente; abajo están Cocina y Aseo. Las columnas son Día y Noche. Toca "Asignar" para poner a alguien, o un nombre para cambiarlo.',
   },
   {
     tab: 'semana', sel: 'cal-vistas',
@@ -49,8 +54,8 @@ export const PASOS: Paso[] = [
   },
   {
     tab: 'cuidadoras', sel: 'cuid-lista',
-    titulo: 'Cuidadoras',
-    texto: 'Tu equipo, con su valoración y puntualidad. Toca una para ver su ficha, llamarla o escribirle por WhatsApp.',
+    titulo: 'Personal',
+    texto: 'Tu equipo por área (Piso, Cocina, Aseo), con sus etiquetas de Emergencia y Particular. Toca a alguien para ver su ficha o escribirle.',
   },
   {
     tab: 'clientes', sel: 'cli-lista',
@@ -59,8 +64,8 @@ export const PASOS: Paso[] = [
   },
   {
     tab: 'pagos', sel: 'pagos-resumen',
-    titulo: 'Pagos del domingo',
-    texto: 'Lo que falta pagar esta semana. Abajo toca "Pagar" en cada cuidadora; toca su nombre para agregar un bono o descuento.',
+    titulo: 'Pagos',
+    texto: 'Se paga por turno más horas extra: quincenal, y diario para el personal de emergencia. Toca un nombre para ver el detalle o agregar un bono o descuento.',
   },
   {
     tab: 'caja', sel: 'caja-kpis',

@@ -2,9 +2,9 @@ import { useState, type ReactNode } from 'react';
 import { ChevronRight, MessageCircle, Pencil, Phone, Search, UserPlus } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Cuidadora } from '../lib/types';
-import { ESTADOS, RASGOS } from '../lib/types';
+import { AREAS, ESTADOS, RASGOS, nombreArea, type Area } from '../lib/types';
 import { clp, edad, fmtDia, fmtHora, fmtHoras } from '../lib/fechas';
-import { estadisticas, linkWhatsApp, personaDe } from '../lib/calculos';
+import { estadisticas, linkWhatsApp, nombreSede, personaDe, sedeActiva } from '../lib/calculos';
 import { COLORES, PALETA } from '../lib/colores';
 import { uid } from '../lib/fechas';
 import { Avatar, Boton, Campo, Card, Estrellas, MenuMas, Modal, Rasgo, Titulo, TurnoIcono, cx, inputCls, primerNombre } from '../components/ui';
@@ -15,10 +15,12 @@ export function Cuidadoras({ param }: { param?: string }) {
   const [verId, setVerId] = useState<string | null>(param ?? null);
   const [editar, setEditar] = useState<Cuidadora | null>(null);
   const [verInactivas, setVerInactivas] = useState(false);
+  const [filtro, setFiltro] = useState<Filtro>('todos');
 
   const lista = db.cuidadoras
     .filter((c) => (verInactivas ? true : c.activa))
-    .filter((c) => (c.nombre + ' ' + c.rasgos.join(' ')).toLowerCase().includes(q.toLowerCase()))
+    .filter((c) => (filtro === 'todos' ? true : filtro === 'emergencia' ? c.emergencia : filtro === 'particular' ? c.particular : c.area === filtro))
+    .filter((c) => (c.nombre + ' ' + c.rasgos.join(' ') + ' ' + (nombreSede(db, c.sedeId) ?? '')).toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => b.valoracion - a.valoracion || a.nombre.localeCompare(b.nombre));
   const inactivas = db.cuidadoras.filter((c) => !c.activa).length;
   const vista = db.cuidadoras.find((c) => c.id === verId);
@@ -31,14 +33,27 @@ export function Cuidadoras({ param }: { param?: string }) {
       <div className="mb-4 flex items-center gap-2">
         <div className="relative min-w-0 flex-1">
           <Search size={17} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-suave" />
-          <input className={cx(inputCls, '!py-2 pl-10')} placeholder="Buscar cuidadora" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className={cx(inputCls, '!py-2 pl-10')} placeholder="Buscar por nombre o sede" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <Boton chico onClick={() => setEditar(nueva())}>
+        <Boton chico onClick={() => setEditar(nueva(sedeActiva(db), filtro === 'cocina' || filtro === 'aseo' ? filtro : 'piso'))}>
           <UserPlus size={16} /> Nueva
         </Boton>
         {inactivas > 0 && (
           <MenuMas label="" items={[{ label: verInactivas ? 'Ocultar inactivas' : `Ver inactivas (${inactivas})`, onClick: () => setVerInactivas((x) => !x) }]} />
         )}
+      </div>
+
+      {/* Filtro por área o etiqueta */}
+      <div className="no-scrollbar -mx-4 mb-4 flex gap-1.5 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:px-0">
+        {FILTROS.map((x) => (
+          <button
+            key={x.id}
+            onClick={() => setFiltro(x.id)}
+            className={cx('shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition', filtro === x.id ? 'border-primario bg-primario-50 text-primario' : 'border-linea bg-superficie text-suave hover:bg-hover')}
+          >
+            {x.label}
+          </button>
+        ))}
       </div>
 
       {/* Lista simple: foto, nombre, estrellas y una línea */}
@@ -55,8 +70,9 @@ export function Cuidadoras({ param }: { param?: string }) {
                       <span className="truncate font-medium">{c.nombre}</span>
                       <Estrellas valor={c.valoracion} size={13} />
                     </span>
-                    <span className="block truncate text-sm text-suave">
-                      {c.experiencia} años exp.{s.puntualidad !== null ? ` · ${pct(s.puntualidad)} puntual` : ""}
+                    <span className="flex min-w-0 items-center gap-1.5 text-sm text-suave">
+                      <EtiquetasPersonal c={c} />
+                      <span className="truncate">{[nombreArea(c.area), nombreSede(db, c.sedeId), s.puntualidad !== null ? `${pct(s.puntualidad)} puntual` : ''].filter(Boolean).join(' · ')}</span>
                     </span>
                   </span>
                   <ChevronRight size={18} className="shrink-0 text-suave" />
@@ -79,6 +95,25 @@ export function Cuidadoras({ param }: { param?: string }) {
   );
 }
 
+type Filtro = 'todos' | Area | 'emergencia' | 'particular';
+const FILTROS: { id: Filtro; label: string }[] = [
+  { id: 'todos', label: 'Todos' },
+  { id: 'piso', label: 'Piso (salud)' },
+  { id: 'cocina', label: 'Cocina' },
+  { id: 'aseo', label: 'Aseo' },
+  { id: 'emergencia', label: 'Emergencia' },
+  { id: 'particular', label: 'Particulares' },
+];
+
+function EtiquetasPersonal({ c }: { c: Cuidadora }) {
+  return (
+    <>
+      {c.emergencia && <span className="shrink-0 rounded bg-alerta-50 px-1.5 text-xs font-medium text-alerta">Emergencia</span>}
+      {c.particular && <span className="shrink-0 rounded bg-info-50 px-1.5 text-xs font-medium text-info">Particular</span>}
+    </>
+  );
+}
+
 const pct = (v: number | null) => (v === null ? '—' : `${Math.round(v * 100)}%`);
 
 function Mini({ label, valor }: { label: string; valor: string }) {
@@ -90,9 +125,10 @@ function Mini({ label, valor }: { label: string; valor: string }) {
   );
 }
 
-const nueva = (): Cuidadora => ({
+const nueva = (sedeId: string | undefined, area: Area): Cuidadora => ({
+  sedeId, area, valorHoraExtra: 5000,
   id: uid(), nombre: '', fechaNacimiento: '1985-01-01', experiencia: 1, telefono: '+56 9 ', descripcion: '', rasgos: [],
-  valoracion: 3, tarifaHora: 4000, color: COLORES[Math.floor(Math.random() * COLORES.length)], activa: true, notas: '',
+  valoracion: 3, valorTurno: 50000, color: COLORES[Math.floor(Math.random() * COLORES.length)], activa: true, notas: '',
 });
 
 function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; onEditar: () => void }) {
@@ -117,9 +153,11 @@ function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; o
       <div className="flex items-center gap-4">
         <Avatar c={c} size={60} />
         <div className="min-w-0">
+          <p className="text-sm text-suave">{[nombreArea(c.area), nombreSede(db, c.sedeId) ?? 'Todas las sedes'].join(' · ')}</p>
           <p className="text-sm text-suave">{edad(c.fechaNacimiento)} años · {c.experiencia} años de experiencia</p>
           <Estrellas valor={c.valoracion} size={16} />
           <div className="mt-1.5 flex flex-wrap gap-1">
+            <EtiquetasPersonal c={c} />
             {c.rasgos.map((r) => <Rasgo key={r} nombre={r} />)}
           </div>
         </div>
@@ -129,7 +167,7 @@ function Perfil({ c, onClose, onEditar }: { c: Cuidadora; onClose: () => void; o
       <div className="mt-4 grid grid-cols-3 gap-2 text-center">
         <Mini label="Asistencia" valor={pct(s.asistencia)} />
         <Mini label="Puntualidad" valor={pct(s.puntualidad)} />
-        <Mini label="Valor hora" valor={clp(c.tarifaHora)} />
+        <Mini label="Valor turno" valor={clp(c.valorTurno)} />
       </div>
 
       {/* 3. Próximos turnos */}
@@ -198,7 +236,7 @@ function FormCuidadora({ inicial, onClose, onGuardada }: { inicial: Cuidadora; o
   const toggle = (r: string) => set({ rasgos: f.rasgos.includes(r) ? f.rasgos.filter((x) => x !== r) : [...f.rasgos, r] });
 
   return (
-    <Modal titulo={existe ? 'Editar cuidadora' : 'Nueva cuidadora'} onClose={onClose} ancho="max-w-2xl">
+    <Modal titulo={existe ? 'Editar ficha' : 'Nueva persona'} onClose={onClose} ancho="max-w-2xl">
       <div className="space-y-4">
         <div className="flex items-center gap-3">
           <Avatar c={{ nombre: f.nombre || '?', color: f.color }} size={56} />
@@ -218,6 +256,27 @@ function FormCuidadora({ inicial, onClose, onGuardada }: { inicial: Cuidadora; o
         <Campo label="Nombre completo">
           <input className={inputCls} value={f.nombre} onChange={(e) => set({ nombre: e.target.value })} placeholder="Ej: Ana María González" autoFocus />
         </Campo>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Campo label="Área">
+            <select className={inputCls} value={f.area} onChange={(e) => set({ area: e.target.value as Area })}>
+              {AREAS.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}
+            </select>
+          </Campo>
+          <Campo label="Sede">
+            <select className={inputCls} value={f.sedeId ?? ''} onChange={(e) => set({ sedeId: e.target.value || undefined })}>
+              {db.sedes.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+              <option value="">Todas las sedes</option>
+            </select>
+          </Campo>
+        </div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input type="checkbox" className="size-5" checked={!!f.emergencia} onChange={(e) => set({ emergencia: e.target.checked })} /> Emergencia (pago diario)
+          </label>
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input type="checkbox" className="size-5" checked={!!f.particular} onChange={(e) => set({ particular: e.target.checked })} /> Particular
+          </label>
+        </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <Campo label="Fecha de nacimiento" ayuda={f.fechaNacimiento ? `${edad(f.fechaNacimiento)} años` : undefined}>
             <input type="date" className={inputCls} value={f.fechaNacimiento} onChange={(e) => set({ fechaNacimiento: e.target.value })} />
@@ -225,8 +284,11 @@ function FormCuidadora({ inicial, onClose, onGuardada }: { inicial: Cuidadora; o
           <Campo label="Años de experiencia">
             <input type="number" min={0} className={inputCls} value={f.experiencia} onChange={(e) => set({ experiencia: Number(e.target.value) })} />
           </Campo>
-          <Campo label="Valor por hora (CLP)">
-            <input type="number" min={0} step={100} className={inputCls} value={f.tarifaHora} onChange={(e) => set({ tarifaHora: Number(e.target.value) })} />
+          <Campo label="Valor por turno (CLP)">
+            <input type="number" min={0} step={1000} className={inputCls} value={f.valorTurno} onChange={(e) => set({ valorTurno: Number(e.target.value) })} />
+          </Campo>
+          <Campo label="Valor hora extra (CLP)">
+            <input type="number" min={0} step={500} className={inputCls} value={f.valorHoraExtra} onChange={(e) => set({ valorHoraExtra: Number(e.target.value) })} />
           </Campo>
         </div>
         <Campo label="Teléfono (WhatsApp)">

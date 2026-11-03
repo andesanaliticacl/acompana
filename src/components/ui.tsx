@@ -232,7 +232,7 @@ export function Logo({ compacto }: { compacto?: boolean }) {
       {!compacto && (
         <div className="leading-tight">
           <div className="text-[17px] font-semibold tracking-tight">Acompaña</div>
-          <div className="text-xs text-suave">Gestión de cuidadoras</div>
+          <div className="text-xs text-suave">ACALI</div>
         </div>
       )}
     </div>
@@ -259,7 +259,7 @@ export interface OpcionMas {
 }
 
 /** Botón "⋯ Más" que despliega acciones secundarias, para dejar a la vista solo lo importante. */
-export function MenuMas({ items, label = 'Más', alinear = 'derecha', haciaArriba }: { items: OpcionMas[]; label?: string; alinear?: 'derecha' | 'izquierda'; haciaArriba?: boolean }) {
+export function MenuMas({ items, label = 'Más', alinear = 'derecha', haciaArriba, icono }: { items: OpcionMas[]; label?: string; alinear?: 'derecha' | 'izquierda'; haciaArriba?: boolean; icono?: ReactNode }) {
   const [abierto, setAbierto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -281,7 +281,7 @@ export function MenuMas({ items, label = 'Más', alinear = 'derecha', haciaArrib
         className={cx('inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium transition', abierto ? 'border-primario bg-primario-50 text-primario' : 'border-linea bg-superficie text-suave hover:bg-fondo')}
         aria-expanded={abierto}
       >
-        <MoreHorizontal size={16} /> {label}
+        {icono ?? <MoreHorizontal size={16} />} {label && <span className="max-w-28 truncate sm:max-w-44">{label}</span>}
       </button>
       {abierto && (
         <div className={cx('anim-menu absolute z-40 min-w-56 overflow-hidden rounded-xl border border-linea bg-superficie py-1 shadow-xl', alinear === 'derecha' ? 'right-0' : 'left-0', haciaArriba ? 'bottom-full mb-1.5 origin-bottom-left' : 'mt-1.5', !haciaArriba && (alinear === 'derecha' ? 'origin-top-right' : 'origin-top-left'))}>

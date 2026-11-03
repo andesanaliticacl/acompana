@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CalendarClock, GraduationCap, Moon, Search, Settings, Sun, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { CalendarClock, GraduationCap, MapPin, Moon, Search, Settings, Sun, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { Hoy } from './screens/Hoy';
 import { Semana } from './screens/Semana';
 import { Cuidadoras } from './screens/Cuidadoras';
@@ -11,6 +11,8 @@ import { Buscador } from './components/Buscador';
 import { Tutorial } from './components/Tutorial';
 import { Logo, MenuMas, cx } from './components/ui';
 import { useTema } from './lib/tema';
+import { useStore } from './state/store';
+import { nombreSede, sedeActiva } from './lib/calculos';
 import { vibrar } from './lib/tacto';
 
 export type Tab = 'hoy' | 'semana' | 'cuidadoras' | 'clientes' | 'pagos' | 'caja' | 'ajustes';
@@ -18,7 +20,7 @@ export type Tab = 'hoy' | 'semana' | 'cuidadoras' | 'clientes' | 'pagos' | 'caja
 /** Regla de 3: tres secciones, cada una con sus pestañas adentro. */
 const SECCIONES: { id: string; label: string; icon: LucideIcon; tabs: { id: Tab; label: string }[] }[] = [
   { id: 'turnos', label: 'Turnos', icon: CalendarClock, tabs: [{ id: 'hoy', label: 'Hoy' }, { id: 'semana', label: 'Calendario' }] },
-  { id: 'personas', label: 'Personas', icon: Users, tabs: [{ id: 'cuidadoras', label: 'Cuidadoras' }, { id: 'clientes', label: 'Clientes' }] },
+  { id: 'personas', label: 'Personas', icon: Users, tabs: [{ id: 'cuidadoras', label: 'Personal' }, { id: 'clientes', label: 'Clientes' }] },
   { id: 'dinero', label: 'Dinero', icon: Wallet, tabs: [{ id: 'pagos', label: 'Pagos' }, { id: 'caja', label: 'Caja' }] },
 ];
 const TABS: Tab[] = [...SECCIONES.flatMap((s) => s.tabs.map((t) => t.id)), 'ajustes'];
@@ -30,6 +32,24 @@ const leerRuta = (): { tab: Tab; param?: string } => {
   const param = resto.length ? decodeURIComponent(resto.join(':')) : undefined;
   return { tab, param };
 };
+
+/** Botón para cambiar de sede en Turnos. */
+function SelectorSede({ ir }: { ir: (t: Tab) => void }) {
+  const { db, setAjustes } = useStore();
+  const actual = sedeActiva(db);
+  return (
+    <div data-tour="sede" className="shrink-0">
+      <MenuMas
+        icono={<MapPin size={16} />}
+        label={nombreSede(db, actual) ?? 'Agregar sede'}
+        items={[
+          ...db.sedes.map((s) => ({ label: s.nombre, activo: s.id === actual, onClick: () => setAjustes({ sedeId: s.id }) })),
+          { label: 'Administrar sedes', icon: <Settings size={16} />, onClick: () => ir('ajustes') },
+        ]}
+      />
+    </div>
+  );
+}
 
 export default function App() {
   const [ruta, setRuta] = useState(leerRuta);
@@ -126,7 +146,8 @@ export default function App() {
         <div className="mx-auto max-w-5xl">
           {/* Pestañas de la sección (2 por sección) con indicador que se desliza */}
           {seccion ? (
-            <div className="relative mb-5 grid rounded-xl bg-segmento p-1 sm:max-w-sm" style={{ gridTemplateColumns: `repeat(${seccion.tabs.length}, minmax(0, 1fr))` }}>
+            <div className="mb-5 flex items-center justify-between gap-2">
+            <div className="relative grid min-w-0 flex-1 rounded-xl bg-segmento p-1 sm:max-w-sm" style={{ gridTemplateColumns: `repeat(${seccion.tabs.length}, minmax(0, 1fr))` }}>
               <span
                 aria-hidden
                 className="absolute inset-y-1 left-1 rounded-lg bg-superficie shadow-sm transition-transform duration-300"
@@ -145,6 +166,8 @@ export default function App() {
                   {t.label}
                 </button>
               ))}
+            </div>
+            {seccion.id === 'turnos' && <SelectorSede ir={ir} />}
             </div>
           ) : (
             <h1 className="mb-5 text-2xl font-semibold tracking-tight">Ajustes</h1>

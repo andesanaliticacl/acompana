@@ -4,6 +4,15 @@ export type IconoTurno = 'manana' | 'tarde' | 'noche' | 'reloj';
 
 export type Estado = 'programado' | 'asistio' | 'atraso' | 'falto';
 
+/** Rubros del personal: Piso (salud) atiende residentes; Cocina y Aseo trabajan para la sede. */
+export type Area = 'piso' | 'cocina' | 'aseo';
+export const AREAS: { id: Area; label: string }[] = [
+  { id: 'piso', label: 'Piso (salud)' },
+  { id: 'cocina', label: 'Cocina' },
+  { id: 'aseo', label: 'Aseo' },
+];
+export const nombreArea = (a?: Area) => AREAS.find((x) => x.id === (a ?? 'piso'))?.label ?? '';
+
 export interface Cuidadora {
   id: string;
   nombre: string;
@@ -13,7 +22,12 @@ export interface Cuidadora {
   descripcion: string;
   rasgos: string[];
   valoracion: number; // 1..5, la pone la dueña
-  tarifaHora: number; // CLP
+  valorTurno: number; // CLP: se paga por turno
+  valorHoraExtra: number; // CLP
+  area: Area;
+  sedeId?: string; // sin sede = sirve en todas (ej. personal de emergencia)
+  emergencia?: boolean; // etiqueta: se le paga por día
+  particular?: boolean; // etiqueta
   color: ColorKey;
   activa: boolean;
   notas: string; // notas privadas de la dueña
@@ -37,6 +51,8 @@ export interface Asignacion {
   turnoId: string;
   personaId?: string; // a quién cuida en ese turno (el piso sale de la persona)
   pisoId?: string; // solo si no tiene persona
+  sedeId?: string; // sede donde se hace el turno
+  horasExtra?: number; // se rellenan a mano y se pagan aparte del turno
   cuidadoraId: string;
   inicio: string;
   fin: string;
@@ -44,11 +60,11 @@ export interface Asignacion {
   nota?: string;
 }
 
-/** Un pago por cuidadora y semana (semana = lunes ISO). Se paga el domingo. */
+/** Un pago por persona y período. periodo = "q:<inicio de quincena>" o "d:<día>" (emergencia, pago diario). */
 export interface Pago {
   id: string;
   cuidadoraId: string;
-  semana: string;
+  periodo: string;
   ajuste: number; // bono (+) o descuento (-)
   monto: number; // monto final pagado
   pagadoEl: string | null;
@@ -62,24 +78,33 @@ export interface Movimiento {
   monto: number;
   cliente?: string;
   medio: 'efectivo' | 'transferencia';
+  sedeId?: string;
+}
+
+/** Sede de la empresa (ej. Dominico, Candil). */
+export interface Sede {
+  id: string;
+  nombre: string;
 }
 
 /** Piso o sector de la residencia. */
 export interface Piso {
   id: string;
   nombre: string;
+  sedeId?: string;
 }
 
 export interface DB {
   cuidadoras: Cuidadora[];
   turnos: Turno[];
+  sedes: Sede[];
   pisos: Piso[];
   clientes: Cliente[];
   personas: Persona[];
   asignaciones: Asignacion[];
   pagos: Pago[];
   movimientos: Movimiento[];
-  ajustes: { nombreDuena: string; ocultarPasos?: boolean };
+  ajustes: { nombreDuena: string; ocultarPasos?: boolean; sedeId?: string };
 }
 
 export const RASGOS: { nombre: string; tono: 'bueno' | 'neutro' | 'ojo' }[] = [
@@ -112,6 +137,7 @@ export const ESTADOS: Record<Estado, { label: string; corto: string; bg: string;
 export interface Cliente {
   id: string;
   nombre: string;
+  sedeId?: string;
   telefono: string;
   cobroSemanal: number; // CLP
   activo: boolean;

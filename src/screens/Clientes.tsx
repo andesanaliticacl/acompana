@@ -3,6 +3,7 @@ import { Check, Plus, Search, Trash2, UserPlus } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Cliente, Persona } from '../lib/types';
 import { clp, hoy, lunesDe, sumarDias, uid } from '../lib/fechas';
+import { nombreSede, sedeActiva } from '../lib/calculos';
 import { vibrar } from '../lib/tacto';
 import { Boton, Campo, Card, Contador, MenuMas, Modal, Titulo, cx, inputCls } from '../components/ui';
 
@@ -19,7 +20,7 @@ export function Clientes({ param }: { param?: string }) {
   const personasDe = (c: Cliente) => db.personas.filter((p) => p.clienteId === c.id);
   const lista = db.clientes
     .filter((c) => verInactivos || c.activo)
-    .filter((c) => [c.nombre, ...personasDe(c).map((p) => p.nombre)].join(' ').toLowerCase().includes(q.toLowerCase()))
+    .filter((c) => [c.nombre, nombreSede(db, c.sedeId), ...personasDe(c).map((p) => p.nombre)].join(' ').toLowerCase().includes(q.toLowerCase()))
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
   const inactivos = db.clientes.filter((c) => !c.activo).length;
   const totalSemanal = db.clientes.filter((c) => c.activo).reduce((s, c) => s + c.cobroSemanal, 0);
@@ -31,7 +32,7 @@ export function Clientes({ param }: { param?: string }) {
   const registrarPago = (c: Cliente) => {
     if (!confirm(`¿Registrar el pago de ${clp(c.cobroSemanal)} de ${c.nombre} en Caja?`)) return;
     vibrar(12);
-    upsert('movimientos', { id: uid(), fecha: h, tipo: 'ingreso', concepto: 'Servicio de cuidado semanal', cliente: c.nombre, monto: c.cobroSemanal, medio: 'transferencia' });
+    upsert('movimientos', { id: uid(), fecha: h, tipo: 'ingreso', concepto: 'Servicio de cuidado semanal', cliente: c.nombre, monto: c.cobroSemanal, medio: 'transferencia', sedeId: c.sedeId });
   };
 
   return (
@@ -42,9 +43,9 @@ export function Clientes({ param }: { param?: string }) {
       <div className="mb-4 flex items-center gap-2">
         <div className="relative min-w-0 flex-1">
           <Search size={17} className="absolute top-1/2 left-3.5 -translate-y-1/2 text-suave" />
-          <input className={cx(inputCls, '!py-2 pl-10')} placeholder="Buscar cliente o residente" value={q} onChange={(e) => setQ(e.target.value)} />
+          <input className={cx(inputCls, '!py-2 pl-10')} placeholder="Buscar cliente, residente o sede" value={q} onChange={(e) => setQ(e.target.value)} />
         </div>
-        <Boton chico onClick={() => setEditar({ id: uid(), nombre: '', telefono: '+56 9 ', cobroSemanal: 0, activo: true })}>
+        <Boton chico onClick={() => setEditar({ id: uid(), nombre: '', sedeId: sedeActiva(db), telefono: '+56 9 ', cobroSemanal: 0, activo: true })}>
           <UserPlus size={16} /> Nuevo
         </Boton>
         {inactivos > 0 && (
@@ -64,7 +65,7 @@ export function Clientes({ param }: { param?: string }) {
                 <button onClick={() => setEditar(c)} className="min-w-0 flex-1 text-left">
                   <span className="block truncate font-medium">{c.nombre}</span>
                   <span className="block truncate text-sm text-suave">
-                    {rs.length ? rs.map((p) => [p.nombre, piso(p.pisoId)].filter(Boolean).join(' · ')).join(' / ') : 'Sin residente'}
+                    {[nombreSede(db, c.sedeId), rs.length ? rs.map((p) => [p.nombre, piso(p.pisoId)].filter(Boolean).join(' · ')).join(' / ') : 'Sin residente'].filter(Boolean).join(' · ')}
                   </span>
                 </button>
                 {pago ? (
@@ -100,11 +101,17 @@ function FormCliente({ inicial, onClose }: { inicial: Cliente; onClose: () => vo
   const [personas, setPersonas] = useState<Persona[]>(originales);
   const existe = db.clientes.some((c) => c.id === f.id);
   const set = (p: Partial<Cliente>) => setF((x) => ({ ...x, ...p }));
+  const pisosDeSede = (sedeId?: string) => db.pisos.filter((x) => !sedeId || x.sedeId === sedeId);
+  const cambiarSede = (sedeId?: string) => {
+    set({ sedeId });
+    // Los pisos son de cada sede: al cambiarla, sus residentes pasan a un piso de la nueva
+    setPersonas((xs) => xs.map((x) => (pisosDeSede(sedeId).some((p) => p.id === x.pisoId) ? x : { ...x, pisoId: pisosDeSede(sedeId)[0]?.id })));
+  };
   const setPersona = (id: string, p: Partial<Persona>) => setPersonas((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x)));
   const agregar = () =>
     setPersonas((xs) => [
       ...xs,
-      { id: uid(), clienteId: f.id, nombre: '', pisoId: db.pisos[0]?.id, cuidados: '', requeridas: Object.fromEntries(db.turnos.map((t) => [t.id, 1])), activa: true },
+      { id: uid(), clienteId: f.id, nombre: '', pisoId: pisosDeSede(f.sedeId)[0]?.id, cuidados: '', requeridas: Object.fromEntries(db.turnos.map((t) => [t.id, 1])), activa: true },
     ]);
 
   const guardar = () => {
@@ -118,9 +125,15 @@ function FormCliente({ inicial, onClose }: { inicial: Cliente; onClose: () => vo
   return (
     <Modal titulo={existe ? 'Editar cliente' : 'Nuevo cliente'} onClose={onClose} ancho="max-w-2xl">
       <div className="space-y-5">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Campo label="Cliente (apoderado)">
             <input className={inputCls} value={f.nombre} onChange={(e) => set({ nombre: e.target.value })} placeholder="Ej: Carolina Larraín" autoFocus />
+          </Campo>
+          <Campo label="Sede">
+            <select className={inputCls} value={f.sedeId ?? ''} onChange={(e) => cambiarSede(e.target.value || undefined)}>
+              {db.sedes.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+              <option value="">Sin sede</option>
+            </select>
           </Campo>
           <Campo label="Teléfono">
             <input className={inputCls} value={f.telefono} onChange={(e) => set({ telefono: e.target.value })} inputMode="tel" />
@@ -146,7 +159,7 @@ function FormCliente({ inicial, onClose }: { inicial: Cliente; onClose: () => vo
                   </Campo>
                   <Campo label="Piso">
                     <select className={inputCls} value={p.pisoId ?? ''} onChange={(e) => setPersona(p.id, { pisoId: e.target.value || undefined })}>
-                      {db.pisos.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+                      {pisosDeSede(f.sedeId).map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
                       <option value="">Sin piso</option>
                     </select>
                   </Campo>

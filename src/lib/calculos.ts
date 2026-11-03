@@ -1,5 +1,5 @@
 import type { Asignacion, DB, Persona, Turno } from './types';
-import { aMin, duracion, hoy, parse, sumarDias } from './fechas';
+import { aMin, duracion, hoy, parse, quincenaDe, sumarDias } from './fechas';
 
 export const horasDe = (a: Pick<Asignacion, 'inicio' | 'fin'>) => duracion(a.inicio, a.fin);
 
@@ -18,29 +18,80 @@ export function turnoSugerido(turnos: Turno[], inicio: string): Turno | undefine
   });
 }
 
-/** Resumen de horas y pago de una cuidadora en una semana (lunes a domingo). */
-export function resumenSemana(db: DB, cuidadoraId: string, lunes: string) {
+/** Resumen de una persona en un período: se paga por turno, más las horas extra rellenadas. Las faltas no se pagan. */
+export function resumenPeriodo(db: DB, cuidadoraId: string, desde: string, hasta: string, clave?: string) {
   const c = db.cuidadoras.find((x) => x.id === cuidadoraId);
   const h = hoy();
-  const lista = asignacionesSemana(db, lunes).filter((a) => a.cuidadoraId === cuidadoraId);
-  let hechas = 0, porVenir = 0, sinConfirmar = 0, faltas = 0, atrasos = 0;
+  const lista = db.asignaciones.filter((a) => a.cuidadoraId === cuidadoraId && a.fecha >= desde && a.fecha <= hasta);
+  let pagables = 0, porVenir = 0, sinConfirmar = 0, faltas = 0, atrasos = 0, horasExtra = 0;
   for (const a of lista) {
     if (a.estado === 'falto') { faltas++; continue; }
     if (a.estado === 'atraso') atrasos++;
-    const hrs = horasDe(a);
-    if (a.fecha > h) porVenir += hrs;
-    else {
-      hechas += hrs;
-      if (a.estado === 'programado') sinConfirmar++;
-    }
+    pagables++;
+    horasExtra += a.horasExtra ?? 0;
+    if (a.fecha > h) porVenir++;
+    else if (a.estado === 'programado') sinConfirmar++;
   }
-  const pago = db.pagos.find((p) => p.cuidadoraId === cuidadoraId && p.semana === lunes);
-  const tarifa = c?.tarifaHora ?? 0;
-  const subtotal = Math.round((hechas + porVenir) * tarifa);
+  const pago = clave ? db.pagos.find((p) => p.cuidadoraId === cuidadoraId && p.periodo === clave) : undefined;
+  const valor = c?.valorTurno ?? 0;
+  const valorExtra = c?.valorHoraExtra ?? 0;
+  const subtotal = pagables * valor + Math.round(horasExtra * valorExtra);
   const ajuste = pago?.ajuste ?? 0;
   return {
-    turnos: lista.length, hechas, porVenir, horas: hechas + porVenir, sinConfirmar, faltas, atrasos,
-    tarifa, subtotal, ajuste, total: subtotal + ajuste, pago, pagado: !!pago?.pagadoEl,
+    turnos: lista.length, pagables, porVenir, sinConfirmar, faltas, atrasos, horasExtra,
+    valor, valorExtra, subtotal, ajuste, total: subtotal + ajuste, pago, pagado: !!pago?.pagadoEl,
+  };
+}
+
+/** Turnos de una persona en una semana (para la planilla del calendario). */
+export const resumenSemana = (db: DB, cuidadoraId: string, lunes: string) => resumenPeriodo(db, cuidadoraId, lunes, sumarDias(lunes, 6));
+
+/** Lo que falta pagar en la quincena de una fecha: quincena para el personal normal, día a día para emergencia. */
+export function porPagarQuincena(db: DB, cuidadoras: DB['cuidadoras'], fecha: string) {
+  const q = quincenaDe(fecha);
+  let total = 0;
+  for (const c of cuidadoras) {
+    if (c.emergencia) {
+      for (let d = q.desde; d <= q.hasta; d = sumarDias(d, 1)) {
+        const r = resumenPeriodo(db, c.id, d, d, `d:${d}`);
+        if (!r.pagado) total += r.total;
+      }
+    } else {
+      const r = resumenPeriodo(db, c.id, q.desde, q.hasta, q.clave);
+      if (!r.pagado) total += r.total;
+    }
+  }
+  return total;
+}
+
+/* ───────────── Sedes ───────────── */
+
+/** Sede elegida en el selector (si la guardada ya no existe, la primera). */
+export const sedeActiva = (db: DB) =>
+  db.sedes.some((s) => s.id === db.ajustes.sedeId) ? db.ajustes.sedeId : db.sedes[0]?.id;
+export const nombreSede = (db: DB, id?: string) => db.sedes.find((s) => s.id === id)?.nombre;
+
+/** Sede de un residente: la de su cliente o, si no tiene, la de su piso. */
+export const sedeDePersona = (db: DB, p: Persona) =>
+  db.clientes.find((c) => c.id === p.clienteId)?.sedeId ?? db.pisos.find((x) => x.id === p.pisoId)?.sedeId;
+/** Sede de una asignación: la del residente o, si no tiene (cocina, aseo), la guardada en ella. */
+export const sedeDeAsignacion = (db: DB, a: Asignacion) => {
+  const p = a.personaId ? db.personas.find((x) => x.id === a.personaId) : undefined;
+  return (p && sedeDePersona(db, p)) ?? a.sedeId;
+};
+/** Lo que no tiene sede se ve en todas. */
+export const enSede = (sedeId: string | undefined, actual: string | undefined) => !actual || !sedeId || sedeId === actual;
+
+/** La misma base, pero solo con lo de la sede elegida. El personal se mantiene completo (hay reemplazos entre sedes). */
+export function vistaSede(db: DB): DB {
+  const actual = sedeActiva(db);
+  if (!actual) return db;
+  return {
+    ...db,
+    pisos: db.pisos.filter((x) => enSede(x.sedeId, actual)),
+    clientes: db.clientes.filter((x) => enSede(x.sedeId, actual)),
+    personas: db.personas.filter((x) => enSede(sedeDePersona(db, x), actual)),
+    asignaciones: db.asignaciones.filter((x) => enSede(sedeDeAsignacion(db, x), actual)),
   };
 }
 

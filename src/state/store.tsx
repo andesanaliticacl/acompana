@@ -8,11 +8,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { DB } from '../lib/types';
 import { crearSeed, dbVacia } from '../lib/seed';
+import { vistaSede } from '../lib/calculos';
 
-// v6: desde aquí la app parte en blanco (antes partía con datos de ejemplo)
-const KEY = 'acompana-v6';
+// v7: sedes, áreas, pago por turno y quincenal (la estructura cambió, por eso parte de cero)
+const KEY = 'acompana-v7';
 
-type Coleccion = 'cuidadoras' | 'turnos' | 'pisos' | 'clientes' | 'personas' | 'asignaciones' | 'pagos' | 'movimientos';
+type Coleccion = 'cuidadoras' | 'turnos' | 'sedes' | 'pisos' | 'clientes' | 'personas' | 'asignaciones' | 'pagos' | 'movimientos';
 type Item<K extends Coleccion> = DB[K][number];
 
 interface Store {
@@ -30,8 +31,7 @@ function cargar(): DB {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const db = JSON.parse(raw) as DB;
-      return { ...db, pisos: db.pisos ?? [], clientes: db.clientes ?? [], personas: db.personas ?? [] };
+      return JSON.parse(raw) as DB;
     }
   } catch {
     /* sin almacenamiento: partimos en blanco */
@@ -76,6 +76,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }
+
+/** Los datos filtrados por la sede elegida. */
+export const useDbSede = () => vistaSede(useStore().db);
 
 export function useStore() {
   const s = useContext(Ctx);

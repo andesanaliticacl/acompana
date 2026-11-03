@@ -3,24 +3,29 @@ import { ChevronRight, HeartPulse, Search, UserRound, Users, X } from 'lucide-re
 import { useStore } from '../state/store';
 import type { Asignacion } from '../lib/types';
 import { clp, fmtDia, hoy } from '../lib/fechas';
-import { personaDe } from '../lib/calculos';
+import { nombreSede, personaDe, sedeDePersona } from '../lib/calculos';
 import { Avatar, TurnoIcono, primerNombre } from './ui';
 import type { Tab } from '../App';
 
 interface Resultado {
   key: string;
-  grupo: 'Cuidadoras' | 'Residentes' | 'Clientes';
+  grupo: 'Personal' | 'Residentes' | 'Clientes';
   icono: ReactNode;
   titulo: string;
   detalle: ReactNode;
   ir: [Tab, string];
+  sede?: string; // al abrirlo, cambia a esta sede
 }
 
 const normal = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 /** Buscador general: cuidadoras, residentes y clientes, con lo que tienen hoy. */
 export function Buscador({ onClose, ir }: { onClose: () => void; ir: (t: Tab, p?: string) => void }) {
-  const { db } = useStore();
+  const { db, setAjustes } = useStore();
+  const abrir = (r: Resultado) => {
+    if (r.sede) setAjustes({ sedeId: r.sede });
+    ir(...r.ir);
+  };
   const [q, setQ] = useState('');
   const input = useRef<HTMLInputElement>(null);
   const h = hoy();
@@ -48,7 +53,7 @@ export function Buscador({ onClose, ir }: { onClose: () => void; ir: (t: Tab, p?
       const t = a && turno(a);
       const r = a && personaDe(db, a);
       resultados.push({
-        key: c.id, grupo: 'Cuidadoras', icono: <Avatar c={c} size={32} />, titulo: c.nombre,
+        key: c.id, grupo: 'Personal', icono: <Avatar c={c} size={32} />, titulo: c.nombre,
         detalle: a && t ? (
           <span className="inline-flex items-center gap-1">
             {hoyA ? 'Hoy' : fmtDia(a.fecha)}: <TurnoIcono icono={t.icono} size={12} /> {t.nombre}
@@ -67,7 +72,7 @@ export function Buscador({ onClose, ir }: { onClose: () => void; ir: (t: Tab, p?
         titulo: r.nombre,
         detalle: (
           <>
-            {[piso(r.pisoId), cli && `Cliente: ${cli.nombre}`].filter(Boolean).join(' · ')}
+            {[nombreSede(db, sedeDePersona(db, r)), piso(r.pisoId), cli && `Cliente: ${cli.nombre}`].filter(Boolean).join(' · ')}
             {hoyA.length > 0 && (
               <span className="block">
                 Hoy: {hoyA.map((a) => `${turno(a)?.nombre ?? ''} ${primerNombre(db.cuidadoras.find((c) => c.id === a.cuidadoraId)?.nombre ?? '')}`).join(' · ')}
@@ -76,6 +81,7 @@ export function Buscador({ onClose, ir }: { onClose: () => void; ir: (t: Tab, p?
           </>
         ),
         ir: ['semana', r.nombre],
+        sede: sedeDePersona(db, r),
       });
     }
     for (const c of db.clientes.filter((c) => coincide(c.nombre))) {
@@ -89,7 +95,7 @@ export function Buscador({ onClose, ir }: { onClose: () => void; ir: (t: Tab, p?
       });
     }
   }
-  const grupos = (['Cuidadoras', 'Residentes', 'Clientes'] as const).map((g) => ({ g, rs: resultados.filter((r) => r.grupo === g) })).filter((x) => x.rs.length);
+  const grupos = (['Personal', 'Residentes', 'Clientes'] as const).map((g) => ({ g, rs: resultados.filter((r) => r.grupo === g) })).filter((x) => x.rs.length);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-velo/50 p-3 pt-[8vh]" onClick={onClose}>
@@ -100,8 +106,8 @@ export function Buscador({ onClose, ir }: { onClose: () => void; ir: (t: Tab, p?
             ref={input}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && resultados[0] && ir(...resultados[0].ir)}
-            placeholder="Buscar cuidadora, residente o cliente…"
+            onKeyDown={(e) => e.key === 'Enter' && resultados[0] && abrir(resultados[0])}
+            placeholder="Buscar personal, residente o cliente…"
             className="flex-1 bg-transparent py-4 text-base outline-none"
           />
           <button onClick={onClose} className="rounded-lg p-1.5 text-suave hover:bg-fondo" aria-label="Cerrar">
@@ -122,7 +128,7 @@ export function Buscador({ onClose, ir }: { onClose: () => void; ir: (t: Tab, p?
                 <ul>
                   {rs.map((r) => (
                     <li key={r.key}>
-                      <button onClick={() => ir(...r.ir)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-primario-50">
+                      <button onClick={() => abrir(r)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-primario-50">
                         {r.icono}
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium">{r.titulo}</span>

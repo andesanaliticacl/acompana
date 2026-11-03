@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { AlertTriangle, Check, MessageCircle, Trash2 } from 'lucide-react';
 import { useStore } from '../state/store';
-import type { Asignacion, Estado } from '../lib/types';
-import { ESTADOS } from '../lib/types';
+import type { Area, Asignacion, Estado } from '../lib/types';
+import { AREAS, ESTADOS } from '../lib/types';
 import { fmtHoras, fmtLargo, uid } from '../lib/fechas';
-import { horario, horasDe, linkWhatsApp, personasActivas, requeridasPersona, requeridasTurno, turnoSugerido } from '../lib/calculos';
+import { horario, horasDe, linkWhatsApp, nombreSede, personasActivas, requeridasPersona, requeridasTurno, sedeActiva, turnoSugerido, vistaSede } from '../lib/calculos';
 import { PALETA } from '../lib/colores';
 import { vibrar } from '../lib/tacto';
 import { Avatar, Boton, Campo, Modal, Segmentado, TurnoIcono, cx, inputCls, primerNombre } from './ui';
@@ -15,6 +15,7 @@ export interface AsignarInicial {
   turnoId?: string;
   personaId?: string;
   cuidadoraId?: string;
+  area?: Area;
 }
 
 /**
@@ -23,15 +24,19 @@ export interface AsignarInicial {
  */
 export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; onClose: () => void }) {
   const { db, upsert, upsertMuchos, remove } = useStore();
+  const vista = vistaSede(db);
+  const actual = sedeActiva(db);
   const existente = inicial.id ? db.asignaciones.find((a) => a.id === inicial.id) : undefined;
   const t0 = db.turnos.find((t) => t.id === inicial.turnoId) ?? db.turnos[0];
   const [f, setF] = useState<Asignacion>(
     existente ?? {
-      id: uid(), fecha: inicial.fecha, turnoId: t0.id, personaId: inicial.personaId, cuidadoraId: '', ...horario(t0, inicial.fecha), estado: 'programado', nota: '',
+      id: uid(), fecha: inicial.fecha, turnoId: t0.id, personaId: inicial.personaId, sedeId: actual, cuidadoraId: '', ...horario(t0, inicial.fecha), estado: 'programado', nota: '',
     },
   );
   const [elegidas, setElegidas] = useState<string[]>(existente ? [existente.cuidadoraId] : inicial.cuidadoraId ? [inicial.cuidadoraId] : []);
   const set = (p: Partial<Asignacion>) => setF((x) => ({ ...x, ...p }));
+  const personaInicial = db.cuidadoras.find((c) => c.id === (existente?.cuidadoraId ?? inicial.cuidadoraId));
+  const [area, setArea] = useState<Area>(inicial.area ?? personaInicial?.area ?? 'piso');
   const turno = db.turnos.find((t) => t.id === f.turnoId);
 
   // Ocupadas: ya tienen algún turno ese día (no se pueden duplicar)
@@ -41,14 +46,25 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
   const persona = db.personas.find((k) => k.id === f.personaId);
   const cliente = db.clientes.find((k) => k.id === persona?.clienteId);
   const piso = db.pisos.find((p) => p.id === persona?.pisoId);
-  const enEsteTurno = db.asignaciones.filter(
-    (a) => a.fecha === f.fecha && a.turnoId === f.turnoId && a.id !== f.id && a.estado !== 'falto' && (!persona || a.personaId === persona.id),
+  const enEsteTurno = vista.asignaciones.filter(
+    (a) => a.fecha === f.fecha && a.turnoId === f.turnoId && a.id !== f.id && a.estado !== 'falto' && (persona ? a.personaId === persona.id : !!a.personaId),
   ).length;
-  const requeridas = persona && turno ? requeridasPersona(persona, turno.id) : turno ? requeridasTurno(db, turno) : 1;
+  const requeridas = persona && turno ? requeridasPersona(persona, turno.id) : turno ? requeridasTurno(vista, turno) : 1;
   const total = enEsteTurno + elegidas.length;
+  // Del área elegida (emergencia sirve para todas): primero las de esta sede y las libres
+  const deOtraSede = (sedeId?: string) => !!sedeId && !!actual && sedeId !== actual;
   const activas = db.cuidadoras
-    .filter((c) => c.activa || elegidas.includes(c.id))
-    .sort((a, b) => Number(ocupadas.has(a.id)) - Number(ocupadas.has(b.id)) || a.nombre.localeCompare(b.nombre));
+    .filter((c) => (c.activa && (c.area === area || c.emergencia)) || elegidas.includes(c.id))
+    .sort((a, b) =>
+      Number(deOtraSede(a.sedeId)) - Number(deOtraSede(b.sedeId)) ||
+      Number(ocupadas.has(a.id)) - Number(ocupadas.has(b.id)) ||
+      a.nombre.localeCompare(b.nombre),
+    );
+  const cambiarArea = (a: Area) => {
+    setArea(a);
+    if (!existente) setElegidas([]);
+    if (a !== 'piso') set({ personaId: undefined });
+  };
 
   const toggle = (id: string) => {
     if (existente) return setElegidas([id]);
@@ -109,12 +125,16 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
           </Campo>
         </div>
 
-        {db.personas.length > 0 && (
+        <Campo label="Área">
+          <Segmentado<Area> valor={area} onChange={cambiarArea} opciones={AREAS.map((x) => ({ id: x.id, label: x.label }))} />
+        </Campo>
+
+        {area === 'piso' && vista.personas.length > 0 && (
           <Campo label="Residente">
             <select className={inputCls} value={f.personaId ?? ''} onChange={(e) => set({ personaId: e.target.value || undefined })}>
               <option value="">Sin residente específico</option>
-              {[...db.pisos, { id: '', nombre: 'Sin piso' }].map((p) => {
-                const cs = personasActivas(db).filter((k) => (k.pisoId ?? '') === p.id);
+              {[...vista.pisos, { id: '', nombre: 'Sin piso' }].map((p) => {
+                const cs = personasActivas(vista).filter((k) => (k.pisoId ?? '') === p.id);
                 if (!cs.length) return null;
                 return (
                   <optgroup key={p.id || 'sin'} label={p.nombre}>
@@ -144,12 +164,17 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
             </Campo>
           </div>
           <p className="mt-1.5 text-xs text-suave">
-            {fmtHoras(horasDe(f))} por persona. Para horas sueltas (ej. 16:00 a 20:00) cambia el horario solo para este caso.
+            {fmtHoras(horasDe(f))}. Se paga por turno; lo adicional va en horas extra.
           </p>
+          <div className="mt-3">
+            <Campo label="Horas extra (opcional)">
+              <input type="number" min={0} step={0.5} inputMode="decimal" className={inputCls} placeholder="0" value={f.horasExtra || ''} onChange={(e) => set({ horasExtra: Number(e.target.value) || undefined })} />
+            </Campo>
+          </div>
         </div>
 
         <Campo label={existente ? 'Cuidadora' : 'Cuidadoras (puedes elegir varias)'}>
-          {!existente && (
+          {!existente && area === 'piso' && (
             <div className="mb-2 flex items-center justify-between rounded-lg bg-fondo px-3 py-2 text-sm">
               <span className="text-suave">{persona ? `${persona.nombre} · ${turno?.nombre ?? ''}` : 'Cobertura del turno'}</span>
               <span className={cx('font-semibold tabular-nums', total >= requeridas ? 'text-ok' : 'text-alerta')}>
@@ -176,7 +201,7 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
                   <Avatar c={c} size={30} />
                   <span className="min-w-0 flex-1 leading-tight">
                     <span className="block truncate font-medium">{c.nombre}</span>
-                    <span className="block text-xs text-suave">{ocu ? `Ya está en ${tOcu?.nombre.toLowerCase() ?? 'otro turno'}` : `${c.experiencia} años de exp.`}</span>
+                    <span className="block text-xs text-suave">{ocu ? `Ya está en ${tOcu?.nombre.toLowerCase() ?? 'otro turno'}` : [c.emergencia && 'Emergencia', deOtraSede(c.sedeId) ? nombreSede(db, c.sedeId) : `${c.experiencia} años de exp.`].filter(Boolean).join(' · ')}</span>
                   </span>
                   <span className={cx('grid size-5 shrink-0 place-items-center rounded border', on ? 'border-primario bg-primario text-sobre' : 'border-borde')}>
                     {on && <Check size={13} strokeWidth={3} />}
@@ -201,7 +226,7 @@ export function AsignarModal({ inicial, onClose }: { inicial: AsignarInicial; on
           <input className={inputCls} placeholder="Ej: paciente Sra. Inés, reemplazo…" value={f.nota ?? ''} onChange={(e) => set({ nota: e.target.value })} />
         </Campo>
 
-        {!existente && total > requeridas && (
+        {!existente && area === 'piso' && total > requeridas && (
           <div className="flex gap-2 rounded-lg bg-aviso-50 p-3 text-sm text-aviso">
             <AlertTriangle size={18} className="mt-0.5 shrink-0" />
             Quedarán {total} cuidadoras en un turno que necesita {requeridas}.

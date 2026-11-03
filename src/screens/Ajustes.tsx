@@ -134,31 +134,59 @@ export function Ajustes() {
       <Card className="mb-4 !p-0">
         <div className="flex items-center justify-between border-b border-linea px-4 py-3">
           <div>
-            <h2 className="font-semibold">Pisos</h2>
-            <p className="text-sm text-suave">Los pisos ordenan a los residentes. Cuántas cuidadoras necesita cada uno se define en Clientes.</p>
+            <h2 className="font-semibold">Sedes y pisos</h2>
+            <p className="text-sm text-suave">Cada sede tiene sus pisos. Los pisos ordenan a los residentes.</p>
           </div>
-          <Boton chico variante="suave" onClick={() => upsert('pisos', { id: uid(), nombre: `Piso ${db.pisos.length + 1}` })}>
-            <Plus size={16} /> Agregar piso
+          <Boton chico variante="suave" onClick={() => upsert('sedes', { id: uid(), nombre: 'Nueva sede' })}>
+            <Plus size={16} /> Agregar sede
           </Boton>
         </div>
-        {db.pisos.length === 0 && <p className="px-4 py-4 text-sm text-suave">Sin pisos.</p>}
         <div className="divide-y divide-linea">
-          {db.pisos.map((p) => {
-            const n = db.personas.filter((k) => k.pisoId === p.id).length;
+          {db.sedes.map((s) => {
+            const pisos = db.pisos.filter((p) => p.sedeId === s.id);
             return (
-              <div key={p.id} className="flex items-center gap-3 px-4 py-2.5">
-                <input className={cx(inputCls, '!w-48')} value={p.nombre} onChange={(e) => upsert('pisos', { ...p, nombre: e.target.value })} aria-label="Nombre del piso" />
-                <span className="text-sm text-suave">{n} residente{n === 1 ? "" : "s"}</span>
-                <Boton
-                  chico
-                  variante="peligro"
-                  className="ml-auto"
-                  onClick={() => {
-                    if (confirm(n ? `${p.nombre} tiene ${n} residentes; quedarán "Sin piso". ¿Borrar igual?` : `¿Borrar ${p.nombre}?`)) remove('pisos', p.id);
-                  }}
-                >
-                  <Trash2 size={16} />
-                </Boton>
+              <div key={s.id} className="space-y-2 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <input className={cx(inputCls, 'min-w-0 flex-1 font-medium sm:max-w-64')} value={s.nombre} onChange={(e) => upsert('sedes', { ...s, nombre: e.target.value })} aria-label="Nombre de la sede" />
+                  <Boton chico variante="fantasma" onClick={() => upsert('pisos', { id: uid(), sedeId: s.id, nombre: `Piso ${pisos.length + 1}` })}>
+                    <Plus size={15} /> Piso
+                  </Boton>
+                  <Boton
+                    chico
+                    variante="peligro"
+                    aria-label={`Borrar ${s.nombre}`}
+                    onClick={() => {
+                      const n = db.cuidadoras.filter((c) => c.sedeId === s.id).length + db.clientes.filter((c) => c.sedeId === s.id).length;
+                      if (n) return alert(`${s.nombre} tiene ${n} personas o clientes. Cámbialos de sede antes de borrarla.`);
+                      if (confirm(`¿Borrar la sede ${s.nombre}${pisos.length ? ' y sus pisos' : ''}?`)) {
+                        pisos.forEach((p) => remove('pisos', p.id));
+                        remove('sedes', s.id);
+                      }
+                    }}
+                  >
+                    <Trash2 size={16} />
+                  </Boton>
+                </div>
+                {pisos.map((p) => {
+                  const n = db.personas.filter((k) => k.pisoId === p.id).length;
+                  return (
+                    <div key={p.id} className="flex items-center gap-2 pl-4">
+                      <input className={cx(inputCls, '!w-40 !py-1.5')} value={p.nombre} onChange={(e) => upsert('pisos', { ...p, nombre: e.target.value })} aria-label="Nombre del piso" />
+                      <span className="text-sm text-suave">{n} residente{n === 1 ? "" : "s"}</span>
+                      <Boton
+                        chico
+                        variante="peligro"
+                        className="ml-auto"
+                        aria-label={`Borrar ${p.nombre}`}
+                        onClick={() => {
+                          if (confirm(n ? `${p.nombre} tiene ${n} residentes; quedarán "Sin piso". ¿Borrar igual?` : `¿Borrar ${p.nombre}?`)) remove('pisos', p.id);
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </Boton>
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
