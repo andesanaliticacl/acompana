@@ -1,10 +1,10 @@
 import { ListChecks, Moon, Plus, Sparkles, Sun, SunMoon, Trash2 } from 'lucide-react';
 import { useStore } from '../state/store';
-import type { IconoTurno, Turno } from '../lib/types';
+import type { Turno } from '../lib/types';
 import { DIAS_CORTOS, duracion, fmtHoras, uid } from '../lib/fechas';
-import { COLORES, PALETA } from '../lib/colores';
+import { PALETA } from '../lib/colores';
 import { requeridasTurno } from '../lib/calculos';
-import { Boton, Campo, Card, OPCIONES_ICONO, Segmentado, Titulo, TurnoIcono, cx, inputCls } from '../components/ui';
+import { Boton, Campo, Card, Segmentado, Titulo, TurnoIcono, cx, inputCls } from '../components/ui';
 import { useTema, type Tema } from '../lib/tema';
 
 
@@ -109,17 +109,7 @@ export function Ajustes() {
                 </p>
               )}
 
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <select className={cx(inputCls, '!w-32 !py-1.5 text-sm')} value={t.icono} onChange={(e) => editarTurno(t, { icono: e.target.value as IconoTurno })} aria-label="Ícono">
-                    {OPCIONES_ICONO.map((o) => <option key={o.id} value={o.id}>Ícono: {o.label}</option>)}
-                  </select>
-                  <div className="flex items-center gap-1.5">
-                    {COLORES.map((k) => (
-                      <button key={k} onClick={() => editarTurno(t, { color: k })} className={cx('size-5 rounded-full border-2', t.color === k ? 'border-tinta' : 'border-white')} style={{ background: PALETA[k].dot }} aria-label={`Color ${k}`} />
-                    ))}
-                  </div>
-                </div>
+              <div className="flex justify-end">
                 <Boton
                   chico
                   variante="peligro"

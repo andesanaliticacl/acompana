@@ -136,12 +136,6 @@ export function Avatar({ c, size = 44 }: { c: Pick<Cuidadora, 'nombre' | 'color'
 }
 
 const ICONOS_TURNO = { manana: Sun, tarde: Sunset, noche: Moon, reloj: Clock } as const;
-export const OPCIONES_ICONO: { id: IconoTurno; label: string }[] = [
-  { id: 'manana', label: 'Sol' },
-  { id: 'tarde', label: 'Atardecer' },
-  { id: 'noche', label: 'Luna' },
-  { id: 'reloj', label: 'Reloj' },
-];
 export function TurnoIcono({ icono, size = 16, className }: { icono: IconoTurno; size?: number; className?: string }) {
   const I = ICONOS_TURNO[icono] ?? Clock;
   return <I size={size} className={cx('shrink-0', className)} />;
