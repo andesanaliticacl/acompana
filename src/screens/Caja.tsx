@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BarChart3, CalendarDays, ChevronLeft, ChevronRight, Download, Plus, Trash2 } from 'lucide-react';
 import { useStore } from '../state/store';
 import type { Movimiento } from '../lib/types';
+import { textoForma } from '../lib/types';
 import { clp, fmtCorto, fmtDia, fmtMes, fmtPeriodo, hoy, iso, lunesDe, parse, sumarDias, uid } from '../lib/fechas';
 import { descargarCSV, nombreSede, sedeActiva } from '../lib/calculos';
 import { Boton, Campo, Card, MenuMas, Modal, Segmentado, Titulo, cx, inputCls } from '../components/ui';
@@ -43,7 +44,7 @@ export function Caja() {
     })),
     ...db.pagos.filter((p) => p.pagadoEl && enMes(p.pagadoEl)).map((p) => ({
       id: p.id, fecha: p.pagadoEl!, tipo: 'gasto' as const, concepto: `Pago a ${db.cuidadoras.find((c) => c.id === p.cuidadoraId)?.nombre ?? 'cuidadora'}`,
-      detalle: fmtPeriodo(p.periodo), monto: p.monto, auto: true,
+      detalle: `${fmtPeriodo(p.periodo)} · ${textoForma(p)}`, monto: p.monto, auto: true,
       sede: nombreSede(db, db.cuidadoras.find((c) => c.id === p.cuidadoraId)?.sedeId),
     })),
   ].sort((a, b) => b.fecha.localeCompare(a.fecha) || a.tipo.localeCompare(b.tipo));

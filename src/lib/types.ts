@@ -74,7 +74,22 @@ export interface Pago {
   ajuste: number; // bono (+) o descuento (-)
   monto: number; // monto final pagado
   pagadoEl: string | null;
+  forma?: FormaPago; // cómo se le pagó; si falta, se deduce del período
+  formaNota?: string; // solo para "otro": ej. "adelanto"
 }
+
+export type FormaPago = 'dia' | 'quincena' | 'otro';
+export const FORMAS_PAGO: { id: FormaPago; label: string }[] = [
+  { id: 'dia', label: 'Por día' },
+  { id: 'quincena', label: 'Por 15' },
+  { id: 'otro', label: 'Otro' },
+];
+export const formaDe = (p: Pick<Pago, 'forma' | 'periodo'>): FormaPago => p.forma ?? (p.periodo.startsWith('d:') ? 'dia' : 'quincena');
+/** Texto de cómo se pagó: "Por día", "Por 15", "Otro" o la nota escrita en "Otro". */
+export const textoForma = (p: Pick<Pago, 'forma' | 'formaNota' | 'periodo'>) => {
+  const f = formaDe(p);
+  return (f === 'otro' && p.formaNota?.trim()) || FORMAS_PAGO.find((x) => x.id === f)!.label;
+};
 
 export interface Movimiento {
   id: string;

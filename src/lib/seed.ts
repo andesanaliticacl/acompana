@@ -204,14 +204,14 @@ export function crearSeed(): DB {
     const q = quincenaDe(d);
     for (const c of cuidadoras.filter((x) => !x.emergencia)) {
       const r = resumenPeriodo(db, c.id, q.desde, q.hasta, q.clave);
-      if (r.turnos) db.pagos.push({ id: uid(), cuidadoraId: c.id, periodo: q.clave, ajuste: 0, monto: r.subtotal, pagadoEl: q.hasta });
+      if (r.turnos) db.pagos.push({ id: uid(), cuidadoraId: c.id, periodo: q.clave, ajuste: 0, monto: r.subtotal, pagadoEl: q.hasta, forma: 'quincena' });
     }
   }
   for (const c of emergencias) {
     const fechas = new Set(asignaciones.filter((a) => a.cuidadoraId === c && a.fecha < h).map((a) => a.fecha));
     for (const f of fechas) {
       const clave = `d:${f}`;
-      db.pagos.push({ id: uid(), cuidadoraId: c, periodo: clave, ajuste: 0, monto: resumenPeriodo(db, c, f, f, clave).subtotal, pagadoEl: f });
+      db.pagos.push({ id: uid(), cuidadoraId: c, periodo: clave, ajuste: 0, monto: resumenPeriodo(db, c, f, f, clave).subtotal, pagadoEl: f, forma: 'dia' });
     }
   }
   return db;

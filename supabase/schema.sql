@@ -108,6 +108,8 @@ create table pagos (
   ajuste int not null default 0,               -- bono (+) / descuento (-)
   monto int not null default 0,
   pagado_el date,
+  forma text,                                  -- dia, quincena u otro
+  forma_nota text,                             -- detalle cuando es otro
   unique (cuidadora_id, periodo)
 );
 
